@@ -157,9 +157,20 @@ public class ServerGame
 
     public void AddGameParticipant(ServerPlayer serverPlayer, uint matchmakingSessionId = 0)
     {
-        //TODO Lobby capacities?
         ServerPlayers.Add(serverPlayer);
-        var replicatedGamePlayer = serverPlayer.ToReplicatedGamePlayer((byte)(ServerPlayers.Count - 1), ReplicatedGameData.mGameId);
+        var slot = (byte)(ServerPlayers.Count - 1);
+        var replicatedGamePlayer = serverPlayer.ToReplicatedGamePlayer(slot, ReplicatedGameData.mGameId);
+
+        // For OTP (game mode 3) assign players to team 0 / team 1 (home/away) instead
+        // of giving each player their own team index. Pick whichever team has fewer players.
+        var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
+        if (gameMode == "3")
+        {
+            var team0Count = ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
+            var team1Count = ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
+            replicatedGamePlayer.mTeamIndex = (ushort)(team0Count <= team1Count ? 0 : 1);
+        }
+
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
 
         GameManagerBase.Server.NotifyGameSetupAsync(serverPlayer.BlazeServerConnection, new NotifyGameSetup

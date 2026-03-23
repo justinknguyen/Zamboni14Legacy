@@ -11,12 +11,35 @@ Because the mini PC sits behind a home router (NAT), both paths require port for
 
 ## Docker Install
 
+### RPCS3 Client Setup
+
+In RPCS3 go to **Configuration -> Network** and under IP/Host Switches add:
+
+```
+gosredirector.ea.com=YOUR_PUBLIC_IP
+```
+
+Replace `YOUR_PUBLIC_IP` with the public IP of your mini PC's router.
+
 ### Prerequisites
 
 - Debian 12 (Bookworm) on the mini PC with SSH access
 - Docker Engine and Docker Compose plugin installed (see below)
-- Your router port-forwarded (see [Port Forward](#step-2--port-forward-on-your-router))
 - The `gosredirector_mod.pfx` certificate file
+
+### Port Forward on Your Router
+
+Forward these ports from your router to the mini PC's local IP:
+
+| Port | Protocol | Service |
+|---|---|---|
+| 42127 | TCP | Redirector (RPCS3 discovery) |
+| 16767 | TCP | Blaze game server |
+| 8082 | TCP | REST API |
+| 17502 | TCP | QoS server |
+| 17499 | UDP | QoS |
+| 17500 | UDP | QoS |
+| 17501 | UDP | QoS |
 
 ### Install Docker on Debian
 

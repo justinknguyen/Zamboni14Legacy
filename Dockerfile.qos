@@ -13,12 +13,15 @@ RUN dotnet publish -c Release -r linux-x64 --self-contained true -o /app/publish
 # Self-contained publish bundles the .NET runtime, so we only need a slim OS base.
 FROM debian:bookworm-slim AS runtime
 
+RUN apt-get update && apt-get install -y libicu72 && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=build /app/publish .
 
 # Entrypoint generates appsettings.json from environment variables at startup.
+# sed strips Windows \r so the script works even when built on a Windows host.
 COPY docker-entrypoint-qos.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Ports:
 #   17502 TCP  QoS TCP

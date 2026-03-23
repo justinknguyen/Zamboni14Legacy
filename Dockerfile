@@ -30,8 +30,9 @@ COPY openssl-zamboni.cnf /etc/openssl-zamboni.cnf
 ENV OPENSSL_CONF=/etc/openssl-zamboni.cnf
 
 # Entrypoint generates zamboni-config.yml from environment variables at startup.
+# sed strips Windows \r so the script works even when built on a Windows host.
 COPY docker-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Ports:
 #   42127 TCP  Redirector (RPCS3 discovery)
