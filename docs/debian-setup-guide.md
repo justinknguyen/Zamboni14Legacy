@@ -71,34 +71,24 @@ nano .env          # set GAME_SERVER_IP and DB_PASSWORD
 
 ### TLS Certificate (`gosredirector_mod.pfx`)
 
-The redirector server (port 42127) requires a TLS certificate named `gosredirector_mod.pfx` placed next to `docker-compose.yml`.
+The redirector server (port 42127) requires the EA `gosredirector.ea.com` certificate packaged as a `.pfx` file. A self-signed certificate will **not** work — the PS3 game client validates against the real EA cert.
 
-**Option A — Generate a self-signed certificate (easiest)**
-
-Run these commands on the mini PC (requires `openssl`, installed by default on Debian):
+**Get the cert from the openBlase repo:**
 
 ```bash
-openssl req -x509 -newkey rsa:2048 -keyout /tmp/key.pem -out /tmp/cert.pem \
-  -days 3650 -nodes \
-  -subj "/CN=gosredirector.ea.com"
-
-openssl pkcs12 -export \
-  -out gosredirector_mod.pfx \
-  -inkey /tmp/key.pem \
-  -in /tmp/cert.pem \
-  -passout pass:123456
-
-rm /tmp/key.pem /tmp/cert.pem
+git clone https://github.com/openBlase/openBlase.git /tmp/openBlase
 ```
 
-This works because RPCS3 redirects `gosredirector.ea.com` to your server via the hosts file, and the PS3-era SSL stack is permissive about certificate validation.
-
-**Option B — Upload an existing certificate**
-
-If you already have the `gosredirector_mod.pfx` file, upload it from your Windows PC:
+Then package it into the `.pfx` format Zamboni expects:
 
 ```bash
-scp "C:\Users\YourName\Downloads\gosredirector_mod.pfx" user@192.168.1.X:/opt/zamboni/gosredirector_mod.pfx
+openssl pkcs12 -export \
+  -out /opt/zamboni/gosredirector_mod.pfx \
+  -inkey /tmp/openBlase/BlaseProxy/gosredirector.ea.com.key \
+  -in /tmp/openBlase/BlaseProxy/gosredirector.ea.com.crt \
+  -passout pass:123456
+
+rm -rf /tmp/openBlase
 ```
 
 ### Build and start
@@ -267,17 +257,23 @@ git clone --branch nhl10-compatability-lazy https://github.com/ZamboniDevelopmen
 
 ---
 
-## Step 9 — Upload the TLS Certificate
+## Step 9 — Generate the TLS Certificate
 
-Run **this on your Windows PC** (not on the mini PC), adjusting the path to the certificate:
+The redirector server requires the EA `gosredirector.ea.com` certificate. A self-signed certificate will **not** work — the PS3 game client validates against the real EA cert.
 
-```bash
-scp "C:\Users\YourName\Downloads\gosredirector_mod.pfx" user@192.168.1.X:/opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx
-```
-
-Back on the mini PC, fix permissions:
+Get the cert from the openBlase repo and package it:
 
 ```bash
+git clone https://github.com/openBlase/openBlase.git /tmp/openBlase
+
+openssl pkcs12 -export \
+  -out /opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx \
+  -inkey /tmp/openBlase/BlaseProxy/gosredirector.ea.com.key \
+  -in /tmp/openBlase/BlaseProxy/gosredirector.ea.com.crt \
+  -passout pass:123456
+
+rm -rf /tmp/openBlase
+
 chown zamboni:zamboni /opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx
 chmod 600 /opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx
 ```
