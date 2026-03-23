@@ -1,0 +1,57 @@
+services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: zamboni
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: zamboni
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zamboni -d zamboni"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Zamboni NHL14 game server (includes redirector) ───────────────────────────
+  zamboni14:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "42127:42127"   # Redirector
+      - "16767:16767"   # Blaze game server
+      - "8082:8082"     # REST API
+    environment:
+      GAME_SERVER_IP: ${GAME_SERVER_IP}
+      GAME_SERVER_PORT: ${GAME_SERVER_PORT:-16767}
+      LOG_LEVEL: ${LOG_LEVEL:-Info}
+      DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Mount your gosredirector_mod.pfx certificate into the container.
+      # Place the file next to docker-compose.yml before starting.
+      - ./gosredirector_mod.pfx:/app/gosredirector_mod.pfx:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── QoS server ────────────────────────────────────────────────────────────────
+  qos:
+    build:
+      context: .
+      dockerfile: Dockerfile.qos
+    ports:
+      - "17502:17502"         # QoS TCP
+      - "17499:17499/udp"     # QoS UDP
+      - "17500:17500/udp"
+      - "17501:17501/udp"
+    environment:
+      QOS_IP: ${GAME_SERVER_IP}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

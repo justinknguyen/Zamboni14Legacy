@@ -1,0 +1,30 @@
+# ── Stage 1: Build ─────────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --branch nhl10-compatability-lazy \
+        https://github.com/ZamboniDevelopment/Skateboard3Server.Qos.git /src/qos
+
+WORKDIR /src/qos/src/Skateboard3Server.Qos
+RUN dotnet publish -c Release -r linux-x64 --self-contained true -o /app/publish
+
+# ── Stage 2: Runtime ───────────────────────────────────────────────────────────
+# Self-contained publish bundles the .NET runtime, so we only need a slim OS base.
+FROM debian:bookworm-slim AS runtime
+
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# Entrypoint generates appsettings.json from environment variables at startup.
+COPY docker-entrypoint-qos.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Ports:
+#   17502 TCP  QoS TCP
+#   17499 UDP  QoS UDP
+#   17500 UDP  QoS UDP
+#   17501 UDP  QoS UDP
+EXPOSE 17502 17499/udp 17500/udp 17501/udp
+
+ENTRYPOINT ["/entrypoint.sh"]

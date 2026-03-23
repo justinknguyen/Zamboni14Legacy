@@ -1,7 +1,96 @@
 # Zamboni NHL14 Legacy Server — Debian Headless Mini PC Setup Guide
 
-This guide installs and configures the Zamboni NHL14 legacy server on a **Debian headless mini PC** on your local network.
-Because the mini PC sits behind a home router (NAT), you must port-forward to it and optionally use a dynamic DNS service if your ISP gives you a changing public IP.
+This guide has **two paths**. Pick one:
+
+- **Docker (recommended)** — fewer steps, easy updates, self-contained. See the section directly below.
+- **Manual (bare-metal)** — no Docker dependency, full control. Skip to [Manual Install](#manual-install).
+
+Because the mini PC sits behind a home router (NAT), both paths require port forwarding and optionally a dynamic DNS service if your ISP changes your public IP.
+
+---
+
+## Docker Install
+
+### Prerequisites
+
+- Debian 12 (Bookworm) on the mini PC with SSH access
+- Docker Engine and Docker Compose plugin installed (see below)
+- Your router port-forwarded (see [Port Forward](#step-2--port-forward-on-your-router))
+- The `gosredirector_mod.pfx` certificate file
+
+### Install Docker on Debian
+
+```bash
+apt-get update
+apt-get install -y ca-certificates curl
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+  https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+```
+
+### Clone the repo and set up config
+
+```bash
+cd /opt
+git clone --branch master https://github.com/ZamboniDevelopment/Zamboni14Legacy.git zamboni
+cd /opt/zamboni
+
+cp .env.example .env
+nano .env          # set GAME_SERVER_IP and DB_PASSWORD
+```
+
+Upload the TLS certificate (run this on your Windows PC):
+
+```bash
+scp "C:\Users\YourName\Downloads\gosredirector_mod.pfx" user@192.168.1.X:/opt/zamboni/gosredirector_mod.pfx
+```
+
+### Build and start
+
+The first build clones BlazeSDK, PSN, and the QoS server — it takes a few minutes.
+
+```bash
+docker compose up -d --build
+```
+
+### Verify
+
+```bash
+docker compose ps
+docker compose logs -f zamboni14
+curl http://127.0.0.1:8082/nhl14/status
+```
+
+### Update
+
+```bash
+cd /opt/zamboni
+git pull
+docker compose up -d --build
+```
+
+### Useful commands
+
+```bash
+docker compose down          # stop all services
+docker compose logs zamboni14 -f
+docker compose logs qos -f
+docker compose logs postgres -f
+docker compose restart zamboni14
+```
+
+> **Tip:** If your public IP changes, update `GAME_SERVER_IP` in `.env` and run `docker compose up -d` (no rebuild needed — the entrypoint regenerates the config from env vars at each start).
+
+---
+
+## Manual Install
 
 After installing, in RPCS3 go to **Configuration → Network** and set
 `gosredirector.ea.com` → your public IP (or DDNS hostname resolved to IP).
