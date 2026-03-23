@@ -83,7 +83,7 @@ openssl req -x509 -newkey rsa:2048 -keyout /tmp/key.pem -out /tmp/cert.pem \
   -subj "/CN=gosredirector.ea.com"
 
 openssl pkcs12 -export \
-  -out /opt/zamboni/gosredirector_mod.pfx \
+  -out gosredirector_mod.pfx \
   -inkey /tmp/key.pem \
   -in /tmp/cert.pem \
   -passout pass:123456
