@@ -69,7 +69,33 @@ cp .env.example .env
 nano .env          # set GAME_SERVER_IP and DB_PASSWORD
 ```
 
-Upload the TLS certificate (run this on your Windows PC):
+### TLS Certificate (`gosredirector_mod.pfx`)
+
+The redirector server (port 42127) requires a TLS certificate named `gosredirector_mod.pfx` placed next to `docker-compose.yml`.
+
+**Option A — Generate a self-signed certificate (easiest)**
+
+Run these commands on the mini PC (requires `openssl`, installed by default on Debian):
+
+```bash
+openssl req -x509 -newkey rsa:2048 -keyout /tmp/key.pem -out /tmp/cert.pem \
+  -days 3650 -nodes \
+  -subj "/CN=gosredirector.ea.com"
+
+openssl pkcs12 -export \
+  -out /opt/zamboni/gosredirector_mod.pfx \
+  -inkey /tmp/key.pem \
+  -in /tmp/cert.pem \
+  -passout pass:123456
+
+rm /tmp/key.pem /tmp/cert.pem
+```
+
+This works because RPCS3 redirects `gosredirector.ea.com` to your server via the hosts file, and the PS3-era SSL stack is permissive about certificate validation.
+
+**Option B — Upload an existing certificate**
+
+If you already have the `gosredirector_mod.pfx` file, upload it from your Windows PC:
 
 ```bash
 scp "C:\Users\YourName\Downloads\gosredirector_mod.pfx" user@192.168.1.X:/opt/zamboni/gosredirector_mod.pfx
