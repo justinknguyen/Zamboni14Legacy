@@ -177,7 +177,13 @@ public class ServerGame
 
     public bool HasSpaceForPlayer()
     {
-        return ReplicatedGameData.mSlotCapacities[0] > ReplicatedGamePlayers.Count;
+        // Use the first non-zero slot capacity, then fall back to mMaxPlayerCapacity.
+        // mSlotCapacities[0] is the typical open-participant slot count sent by the client,
+        // but for OTP the client may order slots differently, so we take the max of all slots.
+        var slotMax = ReplicatedGameData.mSlotCapacities.Count > 0
+            ? ReplicatedGameData.mSlotCapacities.Max()
+            : ReplicatedGameData.mMaxPlayerCapacity;
+        return slotMax > ReplicatedGamePlayers.Count;
     }
 
     public void RemoveGameParticipant(ServerPlayer serverPlayer, PlayerRemovedReason reason, bool notifyOthers = true)

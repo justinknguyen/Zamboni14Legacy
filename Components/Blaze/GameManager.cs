@@ -172,6 +172,9 @@ internal class GameManager : GameManagerBase.Server
             //     });
             // }
 
+            var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
+            var teamCapacity = gameMode == "3" ? (uint)6 : (uint)1;
+
             lobbies.Add(new GameBrowserMatchData
             {
                 mFitScore = 1,
@@ -198,7 +201,7 @@ internal class GameManager : GameManagerBase.Server
                     mQueueCapacity = serverGame.ReplicatedGameData.mQueueCapacity,
                     mQueueCount = serverGame.ReplicatedGameData.mQueueCapacity,
                     mSlotCapacities = serverGame.ReplicatedGameData.mSlotCapacities,
-                    mTeamCapacity = 5,
+                    mTeamCapacity = teamCapacity,
                     mVoipTopology = VoipTopology.VOIP_DISABLED
                 }
             });

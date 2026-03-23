@@ -37,6 +37,7 @@ public class Database
         CreateGamesTable();
         CreateReportTable();
         CreateSoReportTable();
+        CreateOtpReportTable();
     }
 
     private void CreateGameIdSequence()
@@ -306,6 +307,127 @@ public class Database
     }
 
 
+    private void CreateOtpReportTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+
+        // OTP (Online Team Play) - gameType3. Each row is one player's stats for the game.
+        // Column set mirrors reports_vs since individual skater stats are structurally the same.
+        const string createTableQuery = @"
+                CREATE TABLE IF NOT EXISTS reports_otp (
+                    game_id NUMERIC(20,0) NOT NULL,
+                    user_id NUMERIC(20,0) NOT NULL,
+
+                    cdnf BIGINT,
+                    cht INTEGER,
+
+                    bag BIGINT,
+                    bao BIGINT,
+                    bs BIGINT,
+                    fo BIGINT,
+                    fol BIGINT,
+                    hits BIGINT,
+                    loga BIGINT,
+                    logf BIGINT,
+                    otg BIGINT,
+                    oto BIGINT,
+                    pims BIGINT,
+                    ppg BIGINT,
+                    ppga BIGINT,
+                    ppo BIGINT,
+                    psa BIGINT,
+                    psg BIGINT,
+                    pssa BIGINT,
+                    pssc BIGINT,
+                    shg BIGINT,
+                    shga BIGINT,
+                    shta BIGINT,
+                    shts BIGINT,
+                    sklv BIGINT,
+                    so BIGINT,
+                    toa BIGINT,
+                    tsh BIGINT,
+                    wiga BIGINT,
+                    wigf BIGINT,
+
+                    csco BIGINT,
+                    ctry INTEGER,
+                    disc INTEGER,
+                    fhrn BIGINT,
+                    grlt BIGINT,
+                    gtag VARCHAR,
+                    home BOOLEAN,
+                    loss BIGINT,
+                    name VARCHAR,
+                    opct BIGINT,
+
+                    bandavggm BIGINT,
+                    bandavgnet BIGINT,
+                    bandhigm BIGINT,
+                    bandhinet BIGINT,
+                    bandlowgm BIGINT,
+                    bandlownet BIGINT,
+                    bytesrcvdgm BIGINT,
+                    bytesrcvdnet BIGINT,
+                    bytessentgm BIGINT,
+                    bytessentnet BIGINT,
+                    droppkts BIGINT,
+                    fpsavg BIGINT,
+                    fpsdev BIGINT,
+                    fpshi BIGINT,
+                    fpslow BIGINT,
+                    gdesyncend BIGINT,
+                    gdesyncrsn BIGINT,
+                    gendphase BIGINT,
+                    gresult BIGINT,
+                    grpttype BIGINT,
+                    grptver BIGINT,
+                    guests0 BIGINT,
+                    guests1 BIGINT,
+                    lateavggm BIGINT,
+                    lateavgnet BIGINT,
+                    latehigm BIGINT,
+                    latehinet BIGINT,
+                    latelowgm BIGINT,
+                    latelownet BIGINT,
+                    latesdevgm BIGINT,
+                    latesdevnet BIGINT,
+                    pktloss BIGINT,
+                    usersend0 BIGINT,
+                    usersend1 BIGINT,
+                    usersstrt0 BIGINT,
+                    usersstrt1 BIGINT,
+                    voipend0 BIGINT,
+                    voipend1 BIGINT,
+                    voipstrt0 BIGINT,
+                    voipstrt1 BIGINT,
+
+                    otl BIGINT,
+                    peid NUMERIC(20,0),
+                    pnid NUMERIC(20,0),
+                    ppna VARCHAR,
+                    ptag BIGINT,
+                    quit INTEGER,
+                    relt BIGINT,
+                    scor BIGINT,
+                    serg INTEGER,
+                    skil BIGINT,
+                    skpt BIGINT,
+                    team BIGINT,
+                    ties BIGINT,
+                    tnam VARCHAR,
+                    wdnf BIGINT,
+                    wght BIGINT,
+                    wins BIGINT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (game_id, user_id)
+                );";
+
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
     public void InsertReport(SubmitGameReportRequest request)
     {
         InsertGameData(request);
@@ -378,6 +500,10 @@ public class Database
             query = $@"
                 INSERT INTO reports_so (game_id, user_id, {column}) VALUES (@game_id, @user_id, @value)
                 ON CONFLICT (game_id, user_id) DO UPDATE SET {column} = EXCLUDED.{column};";
+        else if (table.Equals("reports_otp"))
+            query = $@"
+                INSERT INTO reports_otp (game_id, user_id, {column}) VALUES (@game_id, @user_id, @value)
+                ON CONFLICT (game_id, user_id) DO UPDATE SET {column} = EXCLUDED.{column};";
 
         using var cmd = new NpgsqlCommand(query, conn);
         cmd.Parameters.AddWithValue("game_id", game_id);
@@ -396,6 +522,7 @@ public class Database
         {
             "gameType1" => "reports_vs",
             "gameType2" => "reports_so",
+            "gameType3" => "reports_otp",
             _ => throw new NotImplementedException($"Game type {request.mGameReport.mGameTypeName} is not mapped.")
         };
 
