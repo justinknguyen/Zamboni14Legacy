@@ -26,12 +26,12 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # OpenSSL compat so the server accepts the old TLS ciphers used by PS3 / NHL 14.
-COPY openssl-zamboni.cnf /etc/openssl-zamboni.cnf
+COPY docker/openssl-zamboni.cnf /etc/openssl-zamboni.cnf
 ENV OPENSSL_CONF=/etc/openssl-zamboni.cnf
 
 # Entrypoint generates zamboni-config.yml from environment variables at startup.
 # sed strips Windows \r so the script works even when built on a Windows host.
-COPY docker-entrypoint.sh /entrypoint.sh
+COPY docker/docker-entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Ports:

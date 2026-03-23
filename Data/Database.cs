@@ -6,7 +6,7 @@ using Npgsql;
 using Tdf;
 using Zamboni14Legacy.Components.NHL14Legacy.Structs.Report;
 
-namespace Zamboni14Legacy;
+namespace Zamboni14Legacy.Data;
 
 public class Database
 {

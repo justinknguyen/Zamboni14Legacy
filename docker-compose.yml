@@ -20,7 +20,7 @@ services:
   zamboni14:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     ports:
       - "42127:42127"   # Redirector
       - "16767:16767"   # Blaze game server
@@ -43,7 +43,7 @@ services:
   qos:
     build:
       context: .
-      dockerfile: Dockerfile.qos
+      dockerfile: docker/Dockerfile.qos
     ports:
       - "17502:17502"         # QoS TCP
       - "17499:17499/udp"     # QoS UDP

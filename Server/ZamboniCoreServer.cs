@@ -1,7 +1,7 @@
 using Blaze3SDK.Blaze.GameManager;
 using BlazeCommon;
 
-namespace Zamboni14Legacy;
+namespace Zamboni14Legacy.Server;
 
 public class ZamboniCoreServer : BlazeServer
 {

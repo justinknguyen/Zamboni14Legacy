@@ -3,7 +3,7 @@ using Blaze3SDK.Blaze.Authentication;
 using Blaze3SDK.Blaze.GameManager;
 using BlazeCommon;
 
-namespace Zamboni14Legacy;
+namespace Zamboni14Legacy.Game;
 
 public class ServerPlayer
 {

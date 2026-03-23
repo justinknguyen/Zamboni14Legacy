@@ -173,7 +173,7 @@ internal class GameManager : GameManagerBase.Server
             // }
 
             var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
-            var teamCapacity = gameMode == "3" ? (uint)6 : (uint)1;
+            var teamCapacity = gameMode == "3" ? (ushort)6 : (ushort)1;
 
             lobbies.Add(new GameBrowserMatchData
             {

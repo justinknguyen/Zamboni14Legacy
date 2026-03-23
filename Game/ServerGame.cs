@@ -3,7 +3,7 @@ using Blaze3SDK.Blaze;
 using Blaze3SDK.Blaze.GameManager;
 using Blaze3SDK.Components;
 
-namespace Zamboni14Legacy;
+namespace Zamboni14Legacy.Game;
 
 public class ServerGame
 {

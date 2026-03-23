@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using BlazeCommon;
 
-namespace Zamboni14Legacy;
+namespace Zamboni14Legacy.Game;
 
 public static class ServerManager
 {

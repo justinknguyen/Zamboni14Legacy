@@ -20,7 +20,7 @@ COPY --from=build /app/publish .
 
 # Entrypoint generates appsettings.json from environment variables at startup.
 # sed strips Windows \r so the script works even when built on a Windows host.
-COPY docker-entrypoint-qos.sh /entrypoint.sh
+COPY docker/docker-entrypoint-qos.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Ports:

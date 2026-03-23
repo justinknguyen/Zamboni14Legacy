@@ -1,4 +1,4 @@
-namespace Zamboni14Legacy;
+namespace Zamboni14Legacy.Config;
 
 public class ZamboniConfig
 {
