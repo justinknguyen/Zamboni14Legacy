@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # ── .NET build ──────────────────────────────────────────────────────────────
+  dotnet-build:
+    name: .NET build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Clone the sibling repos that Zamboni14Legacy.csproj references via
+      # ProjectReference (../BlazeSDK/... and ../PSN/...).
+      - name: Clone BlazeSDK
+        run: git clone --branch nhl14legacy-compatability --depth 1
+               https://github.com/ZamboniDevelopment/BlazeSDK.git
+               ../BlazeSDK
+
+      - name: Clone PSN
+        run: git clone --branch master --depth 1
+               https://github.com/Aim4kill/PSN.git
+               ../PSN
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build
+        run: dotnet build Zamboni14Legacy.csproj -c Release
+
+  # ── Docker build (game server) ───────────────────────────────────────────────
+  docker-build-zamboni:
+    name: Docker build — game server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Zamboni14 image
+        run: docker build -f docker/Dockerfile -t zamboni14:ci .
+
+  # ── Docker build (QoS server) ───────────────────────────────────────────────
+  docker-build-qos:
+    name: Docker build — QoS server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build QoS image
+        run: docker build -f docker/Dockerfile.qos -t zamboni-qos:ci .
