@@ -51,35 +51,92 @@ internal class GameManager : GameManagerBase.Server
         }
     }
 
-    // private static void SendToMatchMakingGame(QueuedPlayer host, QueuedPlayer notHost, StartMatchmakingRequest startMatchmakingRequest, string gameMode)
-    // {
-    //     var zamboniGame = new ServerGame(host.ServerPlayer, startMatchmakingRequest, gameMode);
-    //     
-    //     zamboniGame.AddGameParticipant(host.ServerPlayer, host.MatchmakingSessionId);
-    //
-    //     Task.Run(async () =>
-    //     {
-    //         await Task.Delay(200); 
-    //         
-    //       
-    //         
-    //     zamboniGame.AddGameParticipant(notHost.ServerPlayer, notHost.MatchmakingSessionId);
-    //         
-    //     });
-    // }
-    //
-    // public override Task<StartMatchmakingResponse> StartMatchmakingAsync(StartMatchmakingRequest request, BlazeRpcContext context)
-    // {
-    //     var serverPlayer = ServerManager.GetServerPlayer(context.BlazeConnection);
-    //
-    //     var queuedPlayer = new QueuedPlayer(serverPlayer, request);
-    //     ServerManager.AddQueuedPlayer(queuedPlayer);
-    //
-    //     return Task.FromResult(new StartMatchmakingResponse
-    //     {
-    //         mSessionId = queuedPlayer.MatchmakingSessionId
-    //     });
-    // }
+    public override Task<StartMatchmakingResponse> StartMatchmakingAsync(StartMatchmakingRequest request, BlazeRpcContext context)
+    {
+        var serverPlayer = ServerManager.GetServerPlayer(context.BlazeConnection);
+        var gameMode = request.mCriteriaData.mGenericRulePrefsList
+            .Find(p => p.mRuleName.Equals("OSDK_gameMode"))?.mDesiredValues?.FirstOrDefault() ?? "1";
+
+        if (gameMode != "3")
+            throw new BlazeRpcException(Blaze3RpcError.ERR_COMMAND_NOT_FOUND);
+
+        var queuedPlayer = new QueuedPlayer(serverPlayer, request);
+
+        // Look for an existing OTP game in PRE_GAME with space
+        var existingGame = ServerManager.GetServerGames()
+            .FirstOrDefault(g =>
+                g.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var m) && m == "3" &&
+                g.HasSpaceForPlayer() &&
+                g.ReplicatedGameData.mGameState == GameState.PRE_GAME);
+
+        if (existingGame != null)
+        {
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                existingGame.AddGameParticipant(serverPlayer, queuedPlayer.MatchmakingSessionId);
+
+                var lobbies = GetLobbies();
+                foreach (var sp in ServerManager.GetServerPlayers().ToList())
+                    NotifyGameListUpdateAsync(sp.BlazeServerConnection, new NotifyGameListUpdate
+                    {
+                        mIsFinalUpdate = 1,
+                        mListId = 1,
+                        mUpdatedGames = lobbies
+                    });
+            });
+        }
+        else
+        {
+            // Build game attribs from the matchmaking criteria
+            var attribs = new SortedDictionary<string, string> { { "OSDK_gameMode", "3" } };
+            foreach (var rule in request.mCriteriaData.mGenericRulePrefsList)
+            {
+                var val = rule.mDesiredValues?.FirstOrDefault();
+                if (val != null && val != "abstain")
+                    attribs[rule.mRuleName] = val;
+            }
+
+            var createRequest = new CreateGameRequest
+            {
+                mGameAttribs = attribs,
+                mGameProtocolVersionString = request.mGameProtocolVersionString,
+                mGameSettings = request.mGameSettings,
+                mIgnoreEntryCriteriaWithInvite = request.mIgnoreEntryCriteriaWithInvite,
+                mMaxPlayerCapacity = request.mMaxPlayerCapacity,
+                mNetworkTopology = request.mNetworkTopology,
+                mPresenceMode = PresenceMode.PRESENCE_MODE_STANDARD,
+                mQueueCapacity = request.mQueueCapacity,
+                mSlotCapacities = new List<ushort> { 12, 0 },
+                mTeamCapacity = 0,
+                mVoipNetwork = VoipTopology.VOIP_DISABLED,
+                mPersistedGameIdSecret = new byte[] { },
+                mHostNetworkAddressList = new List<NetworkAddress> { serverPlayer.ExtendedData.mAddress }
+            };
+
+            var serverGame = new ServerGame(serverPlayer, createRequest);
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                serverGame.AddGameParticipant(serverPlayer, queuedPlayer.MatchmakingSessionId);
+
+                var lobbies = GetLobbies();
+                foreach (var sp in ServerManager.GetServerPlayers().ToList())
+                    NotifyGameListUpdateAsync(sp.BlazeServerConnection, new NotifyGameListUpdate
+                    {
+                        mIsFinalUpdate = 1,
+                        mListId = 1,
+                        mUpdatedGames = lobbies
+                    });
+            });
+        }
+
+        return Task.FromResult(new StartMatchmakingResponse
+        {
+            mSessionId = queuedPlayer.MatchmakingSessionId
+        });
+    }
 
     public override Task<NullStruct> CancelMatchmakingAsync(CancelMatchmakingRequest request, BlazeRpcContext context)
     {
