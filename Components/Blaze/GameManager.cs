@@ -213,13 +213,7 @@ internal class GameManager : GameManagerBase.Server
                     mPresenceMode = serverGame.ReplicatedGameData.mPresenceMode,
                     mQueueCapacity = serverGame.ReplicatedGameData.mQueueCapacity,
                     mQueueCount = serverGame.ReplicatedGameData.mQueueCapacity,
-                    mSlotCapacities = gameMode == "3" 
-                        ? new List<ushort>
-                        {
-                            (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0),
-                            (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1)
-                        }
-                        : serverGame.ReplicatedGameData.mSlotCapacities,
+                    mSlotCapacities = gameMode == "3" ? new List<ushort> { 6, 6 } : serverGame.ReplicatedGameData.mSlotCapacities,
                     mTeamCapacity = teamCapacity,
                     mVoipTopology = VoipTopology.VOIP_DISABLED
                 }
