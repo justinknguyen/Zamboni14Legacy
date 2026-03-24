@@ -167,10 +167,10 @@ public class ServerGame
 
         var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
 
-        // For OTP (game mode 3), start on team 0 (home). The client will send setPlayerAttributes REQ=1
-        // which triggers ACTIVE_CONNECTED, after which team changes via SetPlayerTeam become available.
+        // For OTP (game mode 3), start players unassigned (0xFFFF) so the side select screen
+        // lets them pick their own team via SetPlayerTeam
         if (gameMode == "3")
-            replicatedGamePlayer.mTeamIndex = 0;
+            replicatedGamePlayer.mTeamIndex = ushort.MaxValue;
 
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
         ReplicatedGameData.mHostNetworkAddressList.Add(serverPlayer.ExtendedData.mAddress);
