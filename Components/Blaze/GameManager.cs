@@ -270,6 +270,18 @@ internal class GameManager : GameManagerBase.Server
                 mXnetNonce = request.mXnetNonce,
                 mXnetSession = request.mXnetSession
             });
+
+        // Advance game state from INITIALIZING to PRE_GAME so clients leave the loading screen
+        replicatedGameData.mGameState = GameState.PRE_GAME;
+        serverGame.ReplicatedGameData = replicatedGameData;
+
+        foreach (var serverPlayer in serverGame.ServerPlayers)
+            NotifyGameStateChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGameStateChange
+            {
+                mGameId = request.mGameId,
+                mNewGameState = GameState.PRE_GAME
+            });
+
         return Task.FromResult(new NullStruct());
     }
 

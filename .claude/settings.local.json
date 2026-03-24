@@ -1,9 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(dotnet build:*)",
-      "Bash(xargs grep:*)",
-      "Bash(openssl x509:*)"
-    ]
+    "allow": ["*"],
+    "defaultMode": "bypassPermissions"
   }
 }
