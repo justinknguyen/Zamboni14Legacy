@@ -161,19 +161,28 @@ internal class GameManager : GameManagerBase.Server
                     mTeamIndex = gamePlayer.mTeamIndex
                 });
 
-            var teamInfo = new List<GameBrowserTeamInfo>();
-
-            // foreach (var teamCapacity in serverGame.ReplicatedGameData.mTeamCapacity)
-            // {
-            //     teamInfo.Add(new GameBrowserTeamInfo
-            //     {
-            //         mTeamId = teamCapacity.mTeamId,
-            //         mTeamSize = teamCapacity.mTeamCapacity
-            //     });
-            // }
-
             var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
             var teamCapacity = gameMode == "3" ? (ushort)6 : (ushort)1;
+
+            // Build team info vector with actual player counts
+            var teamInfo = new List<GameBrowserTeamInfo>();
+            if (gameMode == "3")
+            {
+                // OTP mode: teams 0 (home) and 1 (away)
+                var team0Count = (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
+                var team1Count = (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
+                
+                teamInfo.Add(new GameBrowserTeamInfo
+                {
+                    mTeamId = 0,
+                    mTeamSize = team0Count
+                });
+                teamInfo.Add(new GameBrowserTeamInfo
+                {
+                    mTeamId = 1,
+                    mTeamSize = team1Count
+                });
+            }
 
             lobbies.Add(new GameBrowserMatchData
             {
@@ -196,7 +205,11 @@ internal class GameManager : GameManagerBase.Server
                     mNetworkTopology = serverGame.ReplicatedGameData.mNetworkTopology,
                     mPersistedGameId = serverGame.ReplicatedGameData.mPersistedGameId,
                     mPingSiteAlias = "qos",
-                    mPlayerCounts = serverGame.ReplicatedGameData.mTeamIds,
+                    mPlayerCounts = new List<ushort>
+                    {
+                        (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0),
+                        (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1)
+                    },
                     mPresenceMode = serverGame.ReplicatedGameData.mPresenceMode,
                     mQueueCapacity = serverGame.ReplicatedGameData.mQueueCapacity,
                     mQueueCount = serverGame.ReplicatedGameData.mQueueCapacity,
