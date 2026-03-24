@@ -71,24 +71,48 @@ nano .env          # set GAME_SERVER_IP and DB_PASSWORD
 
 ### TLS Certificate (`gosredirector_mod.pfx`)
 
-The redirector server (port 42127) requires the EA `gosredirector.ea.com` certificate packaged as a `.pfx` file. A self-signed certificate will **not** work — the PS3 game client validates against the real EA cert.
-
-**Get the cert from the openBlase repo:**
+The redirector server (port 42127) requires a specially-crafted certificate. EA's ProtoSSL (used by NHL 14 on PS3/RPCS3) has a parser bug: if the certificate's signature `algorithmIdentifier` OID is unrecognised, the hash size is set to zero and verification always passes. The script below generates a self-signed certificate and patches the OID to trigger this behaviour.
 
 ```bash
-git clone https://github.com/openBlase/openBlase.git /tmp/openBlase
-```
+mkdir -p /tmp/zamboni-cert && cd /tmp/zamboni-cert
 
-Then package it into the `.pfx` format Zamboni expects:
+# Generate CA
+openssl genrsa -out CA.key.pem 1024
+openssl req -new -md5 -x509 -days 28124 \
+  -key CA.key.pem -out CA.crt \
+  -subj "/OU=Online Technology Group/O=Electronic Arts, Inc./L=Redwood City/ST=California/C=US/CN=OTG3 Certificate Authority"
 
-```bash
+# Generate server key and certificate
+openssl genrsa -out gosredirector.key.pem 1024
+openssl req -new -key gosredirector.key.pem -out gosredirector.csr \
+  -subj "/CN=gosredirector.ea.com/OU=Global Online Studio/O=Electronic Arts, Inc./ST=California/C=US"
+openssl x509 -req -in gosredirector.csr -CA CA.crt -CAkey CA.key.pem \
+  -CAcreateserial -out gosredirector.crt -days 10000 -md5
+
+# Export to DER and patch the algorithmIdentifier OID
+openssl x509 -outform der -in gosredirector.crt -out gosredirector.der
+python3 -c "
+data = bytearray(open('gosredirector.der','rb').read())
+p = bytes.fromhex('2a864886f70d010104')
+r = bytes.fromhex('2a864886f70d010101')
+i = data.find(p)
+assert i != -1
+i = data.find(p, i+1)
+assert i != -1, 'Second occurrence not found'
+data[i:i+len(p)] = r
+open('gosredirector_mod.der','wb').write(data)
+print('Patched at offset', hex(i))
+"
+
+# Convert back and export as PFX
+openssl x509 -inform der -in gosredirector_mod.der -out gosredirector_mod.crt
 openssl pkcs12 -export \
   -out /opt/zamboni/gosredirector_mod.pfx \
-  -inkey /tmp/openBlase/BlaseProxy/gosredirector.ea.com.key \
-  -in /tmp/openBlase/BlaseProxy/gosredirector.ea.com.crt \
+  -inkey gosredirector.key.pem \
+  -in gosredirector_mod.crt \
   -passout pass:123456
 
-rm -rf /tmp/openBlase
+rm -rf /tmp/zamboni-cert
 ```
 
 ### Build and start
@@ -259,20 +283,48 @@ git clone --branch nhl10-compatability-lazy https://github.com/ZamboniDevelopmen
 
 ## Step 9 — Generate the TLS Certificate
 
-The redirector server requires the EA `gosredirector.ea.com` certificate. A self-signed certificate will **not** work — the PS3 game client validates against the real EA cert.
-
-Get the cert from the openBlase repo and package it:
+The redirector server requires a specially-crafted certificate. EA's ProtoSSL (used by NHL 14 on PS3/RPCS3) has a parser bug: if the certificate's signature `algorithmIdentifier` OID is unrecognised, the hash size is set to zero and verification always passes. The script below generates a self-signed certificate and patches the OID to trigger this behaviour.
 
 ```bash
-git clone https://github.com/openBlase/openBlase.git /tmp/openBlase
+mkdir -p /tmp/zamboni-cert && cd /tmp/zamboni-cert
 
+# Generate CA
+openssl genrsa -out CA.key.pem 1024
+openssl req -new -md5 -x509 -days 28124 \
+  -key CA.key.pem -out CA.crt \
+  -subj "/OU=Online Technology Group/O=Electronic Arts, Inc./L=Redwood City/ST=California/C=US/CN=OTG3 Certificate Authority"
+
+# Generate server key and certificate
+openssl genrsa -out gosredirector.key.pem 1024
+openssl req -new -key gosredirector.key.pem -out gosredirector.csr \
+  -subj "/CN=gosredirector.ea.com/OU=Global Online Studio/O=Electronic Arts, Inc./ST=California/C=US"
+openssl x509 -req -in gosredirector.csr -CA CA.crt -CAkey CA.key.pem \
+  -CAcreateserial -out gosredirector.crt -days 10000 -md5
+
+# Export to DER and patch the algorithmIdentifier OID
+openssl x509 -outform der -in gosredirector.crt -out gosredirector.der
+python3 -c "
+data = bytearray(open('gosredirector.der','rb').read())
+p = bytes.fromhex('2a864886f70d010104')
+r = bytes.fromhex('2a864886f70d010101')
+i = data.find(p)
+assert i != -1
+i = data.find(p, i+1)
+assert i != -1, 'Second occurrence not found'
+data[i:i+len(p)] = r
+open('gosredirector_mod.der','wb').write(data)
+print('Patched at offset', hex(i))
+"
+
+# Convert back and export as PFX
+openssl x509 -inform der -in gosredirector_mod.der -out gosredirector_mod.crt
 openssl pkcs12 -export \
   -out /opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx \
-  -inkey /tmp/openBlase/BlaseProxy/gosredirector.ea.com.key \
-  -in /tmp/openBlase/BlaseProxy/gosredirector.ea.com.crt \
+  -inkey gosredirector.key.pem \
+  -in gosredirector_mod.crt \
   -passout pass:123456
 
-rm -rf /tmp/openBlase
+rm -rf /tmp/zamboni-cert
 
 chown zamboni:zamboni /opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx
 chmod 600 /opt/zamboni/Zamboni14Legacy/gosredirector_mod.pfx

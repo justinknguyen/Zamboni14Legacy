@@ -8,9 +8,7 @@ WORKDIR /src
 # Clone the sibling repos that Zamboni14Legacy.csproj references via ProjectReference.
 # These must be at the same directory level as Zamboni14Legacy/ for the relative paths to resolve.
 RUN git clone --branch nhl14legacy-compatability \
-        https://github.com/ZamboniDevelopment/BlazeSDK.git BlazeSDK && \
-    sed -i 's/== SSLv3 || maxSslVersion == TLSv1)/== SSLv3 || maxSslVersion == TLSv1 || maxSslVersion == 0x0302)/g' \
-        BlazeSDK/FixedSsl/SslSocket.cs
+        https://github.com/ZamboniDevelopment/BlazeSDK.git BlazeSDK
 RUN git clone --branch master \
         https://github.com/Aim4kill/PSN.git PSN
 
