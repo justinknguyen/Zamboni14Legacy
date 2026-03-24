@@ -1,4 +1,5 @@
 using System.Timers;
+using Blaze3SDK;
 using Blaze3SDK.Blaze;
 using Blaze3SDK.Blaze.GameManager;
 using Blaze3SDK.Components;
@@ -54,8 +55,11 @@ internal class GameManager : GameManagerBase.Server
     public override Task<StartMatchmakingResponse> StartMatchmakingAsync(StartMatchmakingRequest request, BlazeRpcContext context)
     {
         var serverPlayer = ServerManager.GetServerPlayer(context.BlazeConnection);
-        var gameMode = request.mCriteriaData.mGenericRulePrefsList
-            .Find(p => p.mRuleName.Equals("OSDK_gameMode"))?.mDesiredValues?.FirstOrDefault() ?? "1";
+        var gameModeRule = request.mCriteriaData.mGenericRulePrefsList
+            .FirstOrDefault(p => p.mRuleName == "OSDK_gameMode");
+        var gameMode = gameModeRule.mRuleName != null
+            ? gameModeRule.mDesiredValues?.FirstOrDefault() ?? "1"
+            : "1";
 
         if (gameMode != "3")
             throw new BlazeRpcException(Blaze3RpcError.ERR_COMMAND_NOT_FOUND);
