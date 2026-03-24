@@ -424,6 +424,33 @@ internal class GameManager : GameManagerBase.Server
         return Task.FromResult(new NullStruct());
     }
 
+    public override Task<JoinGameResponse> ResetDedicatedServerAsync(CreateGameRequest request, BlazeRpcContext context)
+    {
+        var host = ServerManager.GetServerPlayer(context.BlazeConnection);
+        var serverGame = new ServerGame(host, request);
+        
+        Task.Run(async () =>
+        {
+            await Task.Delay(100);
+            serverGame.AddGameParticipant(host);
+            var lobbies = GetLobbies();
+
+            foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
+                NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
+                {
+                    mIsFinalUpdate = 1,
+                    mListId = 1,
+                    mUpdatedGames = lobbies
+                });
+        });
+
+        return Task.FromResult(new JoinGameResponse
+        {
+            mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+            mJoinState = JoinState.JOINED_GAME
+        });
+    }
+
     public override Task<CreateGameResponse> CreateGameAsync(CreateGameRequest request, BlazeRpcContext context)
     {
         var host = ServerManager.GetServerPlayer(context.BlazeConnection);
