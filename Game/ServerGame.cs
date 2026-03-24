@@ -119,7 +119,9 @@ public class ServerGame
             mSharedSeed = (uint)gameId,
             mSlotCapacities = request.mSlotCapacities,
             mTeamCapacity = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode) && otpMode == "3" ? (ushort)6 : request.mTeamCapacity,
-            mTeamIds = request.mTeamIds,
+            mTeamIds = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode2) && otpMode2 == "3"
+                ? new List<ushort> { 0, 1 }
+                : request.mTeamIds,
             mTopologyHostInfo = new HostInfo
             {
                 mPlayerId = host.UserIdentification.mAccountId,

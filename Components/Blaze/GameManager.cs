@@ -437,6 +437,56 @@ internal class GameManager : GameManagerBase.Server
         return Task.FromResult(new NullStruct());
     }
 
+    public override Task<NullStruct> SetPlayerTeamAsync(SetPlayerTeamRequest request, BlazeRpcContext context)
+    {
+        var serverGame = ServerManager.GetServerGame(request.mGameId);
+        if (serverGame == null) return Task.FromResult(new NullStruct());
+
+        var playerIndex = serverGame.ReplicatedGamePlayers.FindIndex(p => p.mPlayerId == request.mPlayerId);
+        if (playerIndex >= 0)
+        {
+            var player = serverGame.ReplicatedGamePlayers[playerIndex];
+            player.mTeamIndex = request.mTeamIndex;
+            serverGame.ReplicatedGamePlayers[playerIndex] = player;
+
+            foreach (var serverPlayer in serverGame.ServerPlayers)
+                NotifyGamePlayerTeamChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGamePlayerTeamChange
+                {
+                    mGameId = request.mGameId,
+                    mPlayerId = request.mPlayerId,
+                    mTeamIndex = request.mTeamIndex
+                });
+        }
+
+        return Task.FromResult(new NullStruct());
+    }
+
+    public override Task<NullStruct> SwapPlayersTeamAsync(SwapPlayersTeamRequest request, BlazeRpcContext context)
+    {
+        var serverGame = ServerManager.GetServerGame(request.mGameId);
+        if (serverGame == null) return Task.FromResult(new NullStruct());
+
+        foreach (var swap in request.mSwapPlayersTeam)
+        {
+            var playerIndex = serverGame.ReplicatedGamePlayers.FindIndex(p => p.mPlayerId == swap.mPlayerId);
+            if (playerIndex < 0) continue;
+
+            var player = serverGame.ReplicatedGamePlayers[playerIndex];
+            player.mTeamIndex = swap.mTeamIndex;
+            serverGame.ReplicatedGamePlayers[playerIndex] = player;
+
+            foreach (var serverPlayer in serverGame.ServerPlayers)
+                NotifyGamePlayerTeamChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGamePlayerTeamChange
+                {
+                    mGameId = request.mGameId,
+                    mPlayerId = swap.mPlayerId,
+                    mTeamIndex = swap.mTeamIndex
+                });
+        }
+
+        return Task.FromResult(new NullStruct());
+    }
+
     public override Task<JoinGameResponse> ResetDedicatedServerAsync(CreateGameRequest request, BlazeRpcContext context)
     {
         var host = ServerManager.GetServerPlayer(context.BlazeConnection);
