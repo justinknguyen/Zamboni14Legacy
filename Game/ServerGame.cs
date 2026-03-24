@@ -103,7 +103,7 @@ public class ServerGame
             mMaxPlayerCapacity = request.mMaxPlayerCapacity,
             mMeshAttribs = request.mMeshAttribs,
             mNetworkQosData = host.ExtendedData.mQosData,
-            mNetworkTopology = GameNetworkTopology.PEER_TO_PEER_FULL_MESH,
+            mNetworkTopology = request.mNetworkTopology,
             mPersistedGameId = gameId.ToString(),
             mPersistedGameIdSecret = request.mPersistedGameIdSecret,
             mPingSiteAlias = "qos",
@@ -176,11 +176,23 @@ public class ServerGame
         }
 
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
+        ReplicatedGameData.mHostNetworkAddressList.Add(serverPlayer.ExtendedData.mAddress);
 
         GameManagerBase.Server.NotifyGameSetupAsync(serverPlayer.BlazeServerConnection, new NotifyGameSetup
         {
             mGameData = ReplicatedGameData,
-            mGameRoster = ReplicatedGamePlayers
+            mGameRoster = ReplicatedGamePlayers,
+            mGameSetupReason = new GameSetupReason
+            {
+                MatchmakingSetupContext = new MatchmakingSetupContext
+                {
+                    mFitScore = 10,
+                    mMatchmakingResult = MatchmakingResult.SUCCESS_CREATED_GAME,
+                    mMaxPossibleFitScore = 10,
+                    mSessionId = matchmakingSessionId,
+                    mUserSessionId = matchmakingSessionId
+                }
+            }
         });
 
         NotifyParticipants(new NotifyPlayerJoining
