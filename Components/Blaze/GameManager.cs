@@ -282,22 +282,6 @@ internal class GameManager : GameManagerBase.Server
                 mNewGameState = GameState.PRE_GAME
             });
 
-        // Mark all players as ACTIVE_CONNECTED — in P2P full mesh with no peers, UpdateMeshConnection is never sent
-        foreach (var serverPlayer in serverGame.ServerPlayers)
-        {
-            serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
-            {
-                mGameId = request.mGameId,
-                mPlayerId = serverPlayer.UserIdentification.mBlazeId,
-                mPlayerState = PlayerState.ACTIVE_CONNECTED
-            });
-            serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
-            {
-                mGameId = request.mGameId,
-                mPlayerId = serverPlayer.UserIdentification.mBlazeId
-            });
-        }
-
         return Task.FromResult(new NullStruct());
     }
 
@@ -333,6 +317,23 @@ internal class GameManager : GameManagerBase.Server
                 mPlayerAttribs = request.mPlayerAttributes,
                 mPlayerId = request.mPlayerId
             });
+
+        // REQ attribute signals the player has entered the pre-game lobby.
+        // Transition them to ACTIVE_CONNECTED so the side select UI becomes interactive.
+        if (request.mPlayerAttributes.ContainsKey("REQ") && serverPlayer != null)
+        {
+            zamboniGame.NotifyParticipants(new NotifyGamePlayerStateChange
+            {
+                mGameId = zamboniGame.ReplicatedGameData.mGameId,
+                mPlayerId = request.mPlayerId,
+                mPlayerState = PlayerState.ACTIVE_CONNECTED
+            });
+            zamboniGame.NotifyParticipants(new NotifyPlayerJoinCompleted
+            {
+                mGameId = zamboniGame.ReplicatedGameData.mGameId,
+                mPlayerId = request.mPlayerId
+            });
+        }
 
         return Task.FromResult(new NullStruct());
     }
