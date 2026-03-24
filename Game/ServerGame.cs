@@ -167,13 +167,10 @@ public class ServerGame
 
         var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
 
-        // For OTP (game mode 3), assign players to the team with fewer players
+        // For OTP (game mode 3), start players unassigned (0xFFFF) so the side select screen
+        // lets them pick their own team via SetPlayerTeam
         if (gameMode == "3")
-        {
-            var team0Count = ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
-            var team1Count = ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
-            replicatedGamePlayer.mTeamIndex = (ushort)(team0Count <= team1Count ? 0 : 1);
-        }
+            replicatedGamePlayer.mTeamIndex = ushort.MaxValue;
 
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
         ReplicatedGameData.mHostNetworkAddressList.Add(serverPlayer.ExtendedData.mAddress);
