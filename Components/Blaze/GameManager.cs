@@ -282,6 +282,22 @@ internal class GameManager : GameManagerBase.Server
                 mNewGameState = GameState.PRE_GAME
             });
 
+        // Mark all players as ACTIVE_CONNECTED — in P2P full mesh with no peers, UpdateMeshConnection is never sent
+        foreach (var serverPlayer in serverGame.ServerPlayers)
+        {
+            serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
+            {
+                mGameId = request.mGameId,
+                mPlayerId = serverPlayer.UserIdentification.mBlazeId,
+                mPlayerState = PlayerState.ACTIVE_CONNECTED
+            });
+            serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
+            {
+                mGameId = request.mGameId,
+                mPlayerId = serverPlayer.UserIdentification.mBlazeId
+            });
+        }
+
         return Task.FromResult(new NullStruct());
     }
 
