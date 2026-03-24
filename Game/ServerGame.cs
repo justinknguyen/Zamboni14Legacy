@@ -103,7 +103,7 @@ public class ServerGame
             mMaxPlayerCapacity = request.mMaxPlayerCapacity,
             mMeshAttribs = request.mMeshAttribs,
             mNetworkQosData = host.ExtendedData.mQosData,
-            mNetworkTopology = GameNetworkTopology.PEER_TO_PEER_FULL_MESH, //TODO
+            mNetworkTopology = request.mNetworkTopology,
             mPersistedGameId = gameId.ToString(),
             mPersistedGameIdSecret = request.mPersistedGameIdSecret,
             mPingSiteAlias = "qos",
