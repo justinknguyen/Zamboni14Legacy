@@ -118,7 +118,7 @@ public class ServerGame
             mServerNotResetable = request.mServerNotResetable,
             mSharedSeed = (uint)gameId,
             mSlotCapacities = request.mSlotCapacities,
-            mTeamCapacity = request.mTeamCapacity,
+            mTeamCapacity = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode) && otpMode == "3" ? (ushort)6 : request.mTeamCapacity,
             mTeamIds = request.mTeamIds,
             mTopologyHostInfo = new HostInfo
             {
@@ -163,28 +163,15 @@ public class ServerGame
 
         var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
 
-        // For OTP (game mode 3), assign players to balanced teams and update slot capacities
+        // For OTP (game mode 3), assign players to the team with fewer players
         if (gameMode == "3")
         {
             var team0Count = ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
             var team1Count = ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
-
-            // Assign to team with fewer players
             replicatedGamePlayer.mTeamIndex = (ushort)(team0Count <= team1Count ? 0 : 1);
-
-            ReplicatedGamePlayers.Add(replicatedGamePlayer);
-
-            // Update slot capacities to reflect current player counts per team
-            var finalTeam0Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
-            var finalTeam1Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
-            ReplicatedGameData.mSlotCapacities.Clear();
-            ReplicatedGameData.mSlotCapacities.Add(finalTeam0Count);
-            ReplicatedGameData.mSlotCapacities.Add(finalTeam1Count);
         }
-        else
-        {
-            ReplicatedGamePlayers.Add(replicatedGamePlayer);
-        }
+
+        ReplicatedGamePlayers.Add(replicatedGamePlayer);
 
         GameManagerBase.Server.NotifyGameSetupAsync(serverPlayer.BlazeServerConnection, new NotifyGameSetup
         {
@@ -220,18 +207,6 @@ public class ServerGame
             var replicatedPlayerToRemove = ReplicatedGamePlayers.Find(replicatedPlayer => replicatedPlayer.mPlayerName.Equals(serverPlayer.UserIdentification.mName));
 
             ReplicatedGamePlayers.Remove(replicatedPlayerToRemove);
-
-            var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
-
-            // Update slot capacities for OTP to reflect current player counts per team after removal
-            if (gameMode == "3")
-            {
-                var team0Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
-                var team1Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
-                ReplicatedGameData.mSlotCapacities.Clear();
-                ReplicatedGameData.mSlotCapacities.Add(team0Count);
-                ReplicatedGameData.mSlotCapacities.Add(team1Count);
-            }
 
             if (notifyOthers)
                 NotifyParticipants(new NotifyPlayerRemoved
