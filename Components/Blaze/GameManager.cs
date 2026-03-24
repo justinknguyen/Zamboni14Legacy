@@ -324,14 +324,14 @@ internal class GameManager : GameManagerBase.Server
         {
             zamboniGame.NotifyParticipants(new NotifyGamePlayerStateChange
             {
-                mGameId = zamboniGame.ReplicatedGameData.mGameId,
-                mPlayerId = request.mPlayerId,
+                mGameId = (uint)zamboniGame.ReplicatedGameData.mGameId,
+                mPlayerId = (long)request.mPlayerId,
                 mPlayerState = PlayerState.ACTIVE_CONNECTED
             });
             zamboniGame.NotifyParticipants(new NotifyPlayerJoinCompleted
             {
-                mGameId = zamboniGame.ReplicatedGameData.mGameId,
-                mPlayerId = request.mPlayerId
+                mGameId = (uint)zamboniGame.ReplicatedGameData.mGameId,
+                mPlayerId = (long)request.mPlayerId
             });
         }
 
