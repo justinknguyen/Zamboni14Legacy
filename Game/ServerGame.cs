@@ -117,9 +117,11 @@ public class ServerGame
             mQueueCapacity = request.mQueueCapacity,
             mServerNotResetable = request.mServerNotResetable,
             mSharedSeed = (uint)gameId,
-            mSlotCapacities = request.mSlotCapacities,
-            mTeamCapacity = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode) && otpMode == "3" ? (ushort)6 : request.mTeamCapacity,
-            mTeamIds = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode2) && otpMode2 == "3"
+            mSlotCapacities = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode) && otpMode == "3"
+                ? new List<ushort> { 6, 6 }
+                : request.mSlotCapacities,
+            mTeamCapacity = otpMode == "3" ? (ushort)6 : request.mTeamCapacity,
+            mTeamIds = otpMode == "3"
                 ? new List<ushort> { 0, 1 }
                 : request.mTeamIds,
             mTopologyHostInfo = new HostInfo
@@ -190,13 +192,10 @@ public class ServerGame
 
     public bool HasSpaceForPlayer()
     {
-        // Use the first non-zero slot capacity, then fall back to mMaxPlayerCapacity.
-        // mSlotCapacities[0] is the typical open-participant slot count sent by the client,
-        // but for OTP the client may order slots differently, so we take the max of all slots.
-        var slotMax = ReplicatedGameData.mSlotCapacities.Count > 0
-            ? ReplicatedGameData.mSlotCapacities.Max()
+        var totalCapacity = ReplicatedGameData.mSlotCapacities.Count > 0
+            ? ReplicatedGameData.mSlotCapacities.Sum(x => x)
             : ReplicatedGameData.mMaxPlayerCapacity;
-        return slotMax > ReplicatedGamePlayers.Count;
+        return totalCapacity > ReplicatedGamePlayers.Count;
     }
 
     public void RemoveGameParticipant(ServerPlayer serverPlayer, PlayerRemovedReason reason, bool notifyOthers = true)
