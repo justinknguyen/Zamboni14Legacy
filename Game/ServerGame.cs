@@ -173,6 +173,16 @@ public class ServerGame
 
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
 
+        // For OTP mode, update mSlotCapacities to reflect current player counts per team
+        if (gameMode == "3")
+        {
+            var team0Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
+            var team1Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
+            ReplicatedGameData.mSlotCapacities.Clear();
+            ReplicatedGameData.mSlotCapacities.Add(team0Count);
+            ReplicatedGameData.mSlotCapacities.Add(team1Count);
+        }
+
         GameManagerBase.Server.NotifyGameSetupAsync(serverPlayer.BlazeServerConnection, new NotifyGameSetup
         {
             mGameData = ReplicatedGameData,
@@ -207,6 +217,17 @@ public class ServerGame
             var replicatedPlayerToRemove = ReplicatedGamePlayers.Find(replicatedPlayer => replicatedPlayer.mPlayerName.Equals(serverPlayer.UserIdentification.mName));
 
             ReplicatedGamePlayers.Remove(replicatedPlayerToRemove);
+
+            // For OTP mode, update mSlotCapacities to reflect current player counts per team after removal
+            var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
+            if (gameMode == "3")
+            {
+                var team0Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0);
+                var team1Count = (ushort)ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1);
+                ReplicatedGameData.mSlotCapacities.Clear();
+                ReplicatedGameData.mSlotCapacities.Add(team0Count);
+                ReplicatedGameData.mSlotCapacities.Add(team1Count);
+            }
 
             if (notifyOthers)
                 NotifyParticipants(new NotifyPlayerRemoved
