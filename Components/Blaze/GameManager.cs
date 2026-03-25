@@ -263,7 +263,7 @@ internal class GameManager : GameManagerBase.Server
 
         serverGame.ReplicatedGameData = replicatedGameData;
 
-        foreach (var serverPlayer in serverGame.ServerPlayers)
+        foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
             NotifyGameSessionUpdatedAsync(serverPlayer.BlazeServerConnection, new GameSessionUpdatedNotification
             {
                 mGameId = request.mGameId,
@@ -275,7 +275,7 @@ internal class GameManager : GameManagerBase.Server
         replicatedGameData.mGameState = GameState.PRE_GAME;
         serverGame.ReplicatedGameData = replicatedGameData;
 
-        foreach (var serverPlayer in serverGame.ServerPlayers)
+        foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
             NotifyGameStateChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGameStateChange
             {
                 mGameId = request.mGameId,
@@ -295,7 +295,7 @@ internal class GameManager : GameManagerBase.Server
 
         serverGame.ReplicatedGameData = replicatedGameData;
 
-        foreach (var serverPlayer in serverGame.ServerPlayers)
+        foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
             NotifyGameStateChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGameStateChange
             {
                 mGameId = request.mGameId,
@@ -310,7 +310,7 @@ internal class GameManager : GameManagerBase.Server
         var zamboniGame = ServerManager.GetServerGame(request.mGameId);
         var serverPlayer = ServerManager.GetServerPlayer((uint)request.mPlayerId);
 
-        foreach (var participant in zamboniGame.ServerPlayers)
+        foreach (var participant in zamboniGame.ServerPlayers.ToList())
             NotifyPlayerAttribChangeAsync(participant.BlazeServerConnection, new NotifyPlayerAttribChange
             {
                 mGameId = zamboniGame.ReplicatedGameData.mGameId,
@@ -436,7 +436,7 @@ internal class GameManager : GameManagerBase.Server
 
         serverGame.ReplicatedGameData = replicatedGameData;
 
-        foreach (var serverPlayer in serverGame.ServerPlayers)
+        foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
             NotifyGameSessionUpdatedAsync(serverPlayer.BlazeServerConnection, new GameSessionUpdatedNotification
             {
                 mGameId = request.mGameId,
@@ -457,12 +457,26 @@ internal class GameManager : GameManagerBase.Server
 
         serverGame.ReplicatedGameData = replicatedGameData;
 
-        foreach (var serverPlayer in serverGame.ServerPlayers)
+        foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
             NotifyGameSettingsChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGameSettingsChange
             {
                 mGameSettings = request.mGameSettings,
                 mGameId = request.mGameId
             });
+        return Task.FromResult(new NullStruct());
+    }
+
+    public override Task<NullStruct> UpdateGameHostMigrationStatusAsync(UpdateGameHostMigrationStatusRequest request, BlazeRpcContext context)
+    {
+        var serverGame = ServerManager.GetServerGame(request.mGameId);
+        if (serverGame == null) return Task.FromResult(new NullStruct());
+
+        foreach (var participant in serverGame.ServerPlayers.ToList())
+            NotifyHostMigrationFinishedAsync(participant.BlazeServerConnection, new NotifyHostMigrationFinished
+            {
+                mGameId = (uint)serverGame.ReplicatedGameData.mGameId
+            });
+
         return Task.FromResult(new NullStruct());
     }
 
@@ -478,7 +492,7 @@ internal class GameManager : GameManagerBase.Server
             player.mTeamIndex = request.mTeamIndex;
             serverGame.ReplicatedGamePlayers[playerIndex] = player;
 
-            foreach (var serverPlayer in serverGame.ServerPlayers)
+            foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
                 NotifyGamePlayerTeamChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGamePlayerTeamChange
                 {
                     mGameId = request.mGameId,
@@ -504,7 +518,7 @@ internal class GameManager : GameManagerBase.Server
             player.mTeamIndex = swap.mTeamIndex;
             serverGame.ReplicatedGamePlayers[playerIndex] = player;
 
-            foreach (var serverPlayer in serverGame.ServerPlayers)
+            foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
                 NotifyGamePlayerTeamChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGamePlayerTeamChange
                 {
                     mGameId = request.mGameId,
