@@ -22,6 +22,10 @@
       <ProjectReference Include="..\PSN\SceNetNp\SceNetNp.csproj" />
     </ItemGroup>
 
-    
-    
+    <ItemGroup>
+      <None Update="static\**\*.sql">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

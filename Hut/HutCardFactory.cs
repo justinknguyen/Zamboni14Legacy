@@ -25,9 +25,11 @@ public class HutCardFactory
         TrainingCardDbIdRanges.Add(CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ATTRIBUTE_DEFENSE, new Range(5003049, 5003053));
         TrainingCardDbIdRanges.Add(CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ALL, new Range(5003054, 5003056));
 
-        // TODO: Static player card data not yet ported - these require fcc_players/fcc_badges/fcc_kits tables
-        // PlayerCardDbIdsByCardSubType entries will be populated when static data is available
-        // For now, CreateRandomPlayerCard will generate placeholder cards
+        PlayerCardDbIdsByCardSubType.Add(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_C, Program.Database.GetListDbIds(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_C));
+        PlayerCardDbIdsByCardSubType.Add(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_LW, Program.Database.GetListDbIds(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_LW));
+        PlayerCardDbIdsByCardSubType.Add(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_RW, Program.Database.GetListDbIds(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_RW));
+        PlayerCardDbIdsByCardSubType.Add(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_D, Program.Database.GetListDbIds(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_D));
+        PlayerCardDbIdsByCardSubType.Add(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_GK, Program.Database.GetListDbIds(CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_GK));
 
         LeagueTeamsMapping.Add(0, new Range(0, 31)); //NHL
         LeagueTeamsMapping.Add(1, new Range(32, 61)); //AHL
@@ -142,49 +144,16 @@ public class HutCardFactory
     public static async Task<CardData> CreateRandomPlayerCard(long owner, CardSubType position)
     {
         if (position > CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_GK) throw new Exception("Position must be 0-4");
-
-        // TODO: When static data tables (fcc_players) are available, use real player db IDs
-        if (PlayerCardDbIdsByCardSubType.TryGetValue(position, out var dbIds) && dbIds.Count > 0)
-        {
-            uint cardDbId = dbIds[new Random().Next(dbIds.Count)];
-            return await CreatePlayerCard(owner, cardDbId);
-        }
-
-        // Placeholder: generate a generic player card with a random db ID
-        var placeholderDbId = (uint)new Random().Next(1000000, 1999999);
-        var cardData = new CardData
-        {
-            mAttributes = new List<byte>(),
-            mCardStateId = CardState.CARDHOUSE_CARDSTATE_INVALID,
-            mCardId = 0,
-            mCardDbId = placeholderDbId,
-            mFormationId = 0,
-            mFREE = 0,
-            mCareerRemaining = 0,
-            mInjuryGames = 0,
-            mInjuryType = 0,
-            mMaxTrainingCardsCanApply = 0,
-            mNumberOfOwners = 0,
-            mPreferredPositionId = (byte)position,
-            mDiscardPrice = 0,
-            mRareFlag = 0,
-            mRating = 70,
-            mSalaryCap = 0,
-            mListStats = new List<int>(),
-            mCardSubTypeId = position,
-            mDateIssued = 0,
-            mTeamId = (uint)new Random().Next(0, 31),
-            mListTrainingCards = new List<int>(),
-            mUsesRemaining = 0
-        };
-        return await CreateOrUpdateCard(cardData, owner, DeckType.CARDHOUSE_DECK_UNASSIGNED);
+        List<uint> dbIds = PlayerCardDbIdsByCardSubType[position];
+        uint cardDbId = dbIds[new Random().Next(dbIds.Count)];
+        return await CreatePlayerCard(owner, cardDbId);
     }
 
     public static async Task<CardData> CreatePlayerCard(long owner, uint dbId)
     {
-        // TODO: Requires static player data tables (fcc_players) - not yet ported
-        // When available: var staticCardData = await Program.Database.GetPlayerCardDataByDbId(dbId);
-        throw new NotImplementedException("Static player card data not yet available. Use CreateRandomPlayerCard instead.");
+        var staticCardData = await Program.Database.GetPlayerCardDataByDbId(dbId);
+        var cardData = await CreateOrUpdateCard(staticCardData, owner, DeckType.CARDHOUSE_DECK_UNASSIGNED);
+        return cardData;
     }
 
     public static async Task<CardData> CreateOrUpdateCard(CardData cardData, long ownerUserId, DeckType? deckType = null)

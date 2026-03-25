@@ -4,6 +4,7 @@ using Blaze3SDK.Blaze.GameReporting;
 using NLog;
 using Npgsql;
 using Tdf;
+using Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
 using Zamboni14Legacy.Components.NHL14Legacy.Structs.Report;
 
 namespace Zamboni14Legacy.Data;
@@ -48,6 +49,8 @@ public class Database
         CreateHutCardsTable();
         CreateTradeInfoTable();
         CreateOfferInfoTable();
+        CreateStaticDataTables();
+        ImportStaticData();
     }
 
     private void CreateGameIdSequence()
@@ -763,5 +766,223 @@ public class Database
             throw new InvalidOperationException("Sequence returned no value.");
 
         return (ulong)(long)result;
+    }
+
+    private void CreateStaticDataTables()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS fcc_badges (
+                carddbid BIGINT,
+                teamid INTEGER
+            );
+            CREATE TABLE IF NOT EXISTS fcc_kits (
+                carddbid BIGINT,
+                teamid INTEGER
+            );
+            CREATE TABLE IF NOT EXISTS fcc_playercards (
+                carddbid INTEGER,
+                attribute1 INTEGER,
+                stat1 INTEGER,
+                attribute8 INTEGER,
+                attribute6 INTEGER,
+                firstname TEXT,
+                lastname TEXT,
+                stat3 INTEGER,
+                preferredposition INTEGER,
+                commonname TEXT,
+                stat4 INTEGER,
+                attribute5 INTEGER,
+                stat2 INTEGER,
+                nation INTEGER,
+                stat5 INTEGER,
+                teamid INTEGER,
+                rating INTEGER,
+                injury INTEGER,
+                fieldpos INTEGER,
+                formationid INTEGER,
+                attribute4 INTEGER,
+                attribute2 INTEGER,
+                attribute3 INTEGER,
+                injuryduration INTEGER,
+                attribute7 INTEGER,
+                rare INTEGER
+            );";
+
+        using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void ImportStaticData()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+
+        // Check if data already imported
+        using (var checkCmd = new NpgsqlCommand("SELECT COUNT(*) FROM fcc_playercards", conn))
+        {
+            var count = (long)checkCmd.ExecuteScalar();
+            if (count > 0)
+            {
+                Logger.Info($"Static data already loaded ({count} player cards).");
+                return;
+            }
+        }
+
+        var staticDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "static");
+        if (!Directory.Exists(staticDir))
+        {
+            Logger.Warn("Static data directory not found. HUT player cards will use placeholders.");
+            return;
+        }
+
+        ImportSqlCopyFile(conn, Path.Combine(staticDir, "fcc_badges.sql"), "fcc_badges", new[] { "carddbid", "teamid" });
+        ImportSqlCopyFile(conn, Path.Combine(staticDir, "fcc_kits.sql"), "fcc_kits", new[] { "carddbid", "teamid" });
+        ImportSqlCopyFile(conn, Path.Combine(staticDir, "fcc_playercards.sql"), "fcc_playercards",
+            new[] { "carddbid", "attribute1", "stat1", "attribute8", "attribute6", "firstname", "lastname", "stat3",
+                     "preferredposition", "commonname", "stat4", "attribute5", "stat2", "nation", "stat5", "teamid",
+                     "rating", "injury", "fieldpos", "formationid", "attribute4", "attribute2", "attribute3",
+                     "injuryduration", "attribute7", "rare" });
+
+        Logger.Warn("Static HUT data imported successfully.");
+    }
+
+    private void ImportSqlCopyFile(NpgsqlConnection conn, string filePath, string tableName, string[] columns)
+    {
+        if (!File.Exists(filePath))
+        {
+            Logger.Warn($"Static data file not found: {filePath}");
+            return;
+        }
+
+        var lines = File.ReadAllLines(filePath);
+        bool inCopyBlock = false;
+
+        using var writer = conn.BeginBinaryImport($"COPY {tableName} ({string.Join(", ", columns)}) FROM STDIN (FORMAT BINARY)");
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("COPY public."))
+            {
+                inCopyBlock = true;
+                continue;
+            }
+
+            if (inCopyBlock)
+            {
+                if (line == "\\." || line.Trim() == "\\.")
+                {
+                    break;
+                }
+
+                var values = line.Split('\t');
+                writer.StartRow();
+
+                for (int i = 0; i < columns.Length && i < values.Length; i++)
+                {
+                    var val = values[i];
+                    if (val == "\\N")
+                    {
+                        writer.WriteNull();
+                    }
+                    else if (int.TryParse(val, out int intVal))
+                    {
+                        writer.Write(intVal);
+                    }
+                    else if (long.TryParse(val, out long longVal))
+                    {
+                        writer.Write(longVal);
+                    }
+                    else
+                    {
+                        writer.Write(val);
+                    }
+                }
+            }
+        }
+
+        writer.Complete();
+    }
+
+    public List<uint> GetListDbIds(CardSubType cardSubType)
+    {
+        var ids = new List<uint>();
+        if (cardSubType > CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_GK) return ids;
+
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+
+        string sql = "SELECT carddbid FROM fcc_playercards WHERE preferredposition = @pos";
+
+        using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("pos", (int)cardSubType);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            ids.Add((uint)reader.GetInt32(0));
+        }
+
+        return ids;
+    }
+
+    public async Task<CardData> GetPlayerCardDataByDbId(uint cardDbId)
+    {
+        const string sql = "SELECT * FROM fcc_playercards WHERE carddbid = @dbid LIMIT 1";
+
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("dbid", (int)cardDbId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        if (await reader.ReadAsync())
+        {
+            return new CardData
+            {
+                mAttributes = new List<byte>
+                {
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute1")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute2")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute3")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute4")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute5")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute6")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute7")),
+                    (byte)reader.GetInt32(reader.GetOrdinal("attribute8")),
+                },
+                mCardStateId = CardState.CARDHOUSE_CARDSTATE_FREE,
+                mCardDbId = cardDbId,
+                mFormationId = (byte)reader.GetInt32(reader.GetOrdinal("formationid")),
+                mCareerRemaining = 50,
+                mInjuryGames = (byte)reader.GetInt32(reader.GetOrdinal("injuryduration")),
+                mInjuryType = (byte)reader.GetInt32(reader.GetOrdinal("injury")),
+                mMaxTrainingCardsCanApply = 10,
+                mPreferredPositionId = (byte)reader.GetInt32(reader.GetOrdinal("preferredposition")),
+                mDiscardPrice = 85,
+                mRareFlag = (byte)reader.GetInt32(reader.GetOrdinal("rare")),
+                mRating = (byte)reader.GetInt32(reader.GetOrdinal("rating")),
+                mSalaryCap = 84,
+                mListStats = new List<int>
+                {
+                    reader.GetInt32(reader.GetOrdinal("stat1")),
+                    reader.GetInt32(reader.GetOrdinal("stat2")),
+                    reader.GetInt32(reader.GetOrdinal("stat3")),
+                    reader.GetInt32(reader.GetOrdinal("stat4")),
+                    reader.GetInt32(reader.GetOrdinal("stat5")),
+                },
+                mCardSubTypeId = (CardSubType)reader.GetInt32(reader.GetOrdinal("fieldpos")),
+                mDateIssued = Util.TimeNow(),
+                mTeamId = (uint)reader.GetInt32(reader.GetOrdinal("teamid")),
+                mListTrainingCards = new List<int> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                mUsesRemaining = 20
+            };
+        }
+
+        return new CardData();
     }
 }
