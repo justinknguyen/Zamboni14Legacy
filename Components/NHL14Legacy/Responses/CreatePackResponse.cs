@@ -1,0 +1,34 @@
+using System.Collections.Generic;
+using Tdf;
+using Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
+
+namespace Zamboni14Legacy.Components.NHL14Legacy.Responses;
+
+[TdfStruct]
+public struct CreatePackResponse
+{
+    [TdfMember("CDAT")]
+    public List<CardData> mCardDataList;
+
+    [TdfMember("DUPL")]
+    public List<CardIdPair> mDuplicateCardIdPairList;
+
+    //TODO THESE THREE MIGHT BE NAMED WRONG
+    //TODO \/
+
+    [TdfMember("NUM")]
+    public uint mNumCards;
+
+    [TdfMember("PCNT")]
+    public long mNumPackPurchased;
+
+    [TdfMember("PKTY")]
+    public uint mRandPackType;
+
+    //TODO /\
+    //TODO THESE THREE MIGHT BE NAMED WRONG
+
+    [TdfMember("VER")]
+    public VersionInfo mVersionInfo;
+
+}

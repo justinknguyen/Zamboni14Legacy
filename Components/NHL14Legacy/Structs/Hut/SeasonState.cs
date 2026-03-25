@@ -1,0 +1,9 @@
+namespace Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
+
+public enum SeasonState : int
+{
+    SEASONALPLAY_SEASON_STATE_NONE = 0,
+    SEASONALPLAY_SEASON_STATE_REGULARSEASON = 1,
+    SEASONALPLAY_SEASON_STATE_PLAYOFF = 2,
+    SEASONALPLAY_SEASON_STATE_BLACKOUT = 3
+}

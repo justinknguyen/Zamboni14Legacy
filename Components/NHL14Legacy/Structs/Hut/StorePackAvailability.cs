@@ -1,0 +1,10 @@
+namespace Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
+
+public enum StorePackAvailability : byte
+{
+    /// TODO Id's not confirmed
+    CARDHOUSE_STOREPACKAVAILABILITY_INVALID = 0,
+    CARDHOUSE_STOREPACKAVAILABILITY_COINS = 1,
+    CARDHOUSE_STOREPACKAVAILABILITY_COINS_MTX = 2,
+    CARDHOUSE_STOREPACKAVAILABILITY_MAX = 3,
+}

@@ -11,6 +11,7 @@ namespace Zamboni14Legacy.Data;
 public class Database
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    public static string ConnectionString { get; private set; } = "";
     private readonly string connectionString = Program.ZamboniConfig.DatabaseConnectionString;
     public readonly bool isEnabled;
 
@@ -18,6 +19,7 @@ public class Database
 
     public Database()
     {
+        ConnectionString = connectionString;
         try
         {
             using var conn = new NpgsqlConnection(connectionString);
@@ -38,6 +40,14 @@ public class Database
         CreateReportTable();
         CreateSoReportTable();
         CreateOtpReportTable();
+        CreateHutReportTable();
+        CreateHutGamerInfoTable();
+        CreateHutGeneralInfoTable();
+        CreateHutVersionInfoTable();
+        CreateHutSquadInfoTable();
+        CreateHutCardsTable();
+        CreateTradeInfoTable();
+        CreateOfferInfoTable();
     }
 
     private void CreateGameIdSequence()
@@ -555,6 +565,188 @@ public class Database
             ushort uShortValue => (int)uShortValue,
             _ => val ?? DBNull.Value
         };
+    }
+
+    private void CreateHutReportTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_reports (
+                game_id BIGINT NOT NULL,
+                user_id BIGINT NOT NULL,
+                bandavggm INTEGER, bandavgnet INTEGER, bandhigm INTEGER, bandhinet INTEGER,
+                bandlowgm INTEGER, bandlownet INTEGER, bytesrcvdgm INTEGER, bytesrcvdnet INTEGER,
+                bytessentgm INTEGER, bytessentnet INTEGER, droppkts INTEGER,
+                lateavggm INTEGER, lateavgnet INTEGER, latehigm INTEGER, latehinet INTEGER,
+                latelowgm INTEGER, latelownet INTEGER, latesdevgm INTEGER, latesdevnet INTEGER, pktloss INTEGER,
+                fpsavg INTEGER, fpsdev INTEGER, fpshi INTEGER, fpslow INTEGER,
+                gdesyncend INTEGER, gdesyncrsn INTEGER, gendphase INTEGER, gresult INTEGER,
+                grpttype INTEGER, grptver VARCHAR,
+                guests0 INTEGER, guests1 INTEGER, usersend0 INTEGER, usersend1 INTEGER,
+                usersstrt0 INTEGER, usersstrt1 INTEGER, voipend0 INTEGER, voipend1 INTEGER,
+                voipstrt0 INTEGER, voipstrt1 INTEGER,
+                gamertag VARCHAR, name VARCHAR, team INTEGER, team_name VARCHAR,
+                home INTEGER, quit INTEGER, disc INTEGER, cheat INTEGER,
+                score INTEGER, userresult INTEGER, weight INTEGER,
+                bkchance INTEGER, bkgoal INTEGER, blkshot INTEGER, faceoff INTEGER,
+                hits INTEGER, passchance INTEGER, passcomp INTEGER, penmin INTEGER,
+                ppo INTEGER, ppg INTEGER, pshchance INTEGER, pshgoal INTEGER,
+                onetgoal INTEGER, onetchance INTEGER, shg INTEGER, shots INTEGER, toa INTEGER,
+                tropply1 INTEGER, tropply2 INTEGER, tropply3 INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (game_id, user_id)
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateHutGamerInfoTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_gamer_info (
+                user_id BIGINT PRIMARY KEY,
+                custom_tactics VARCHAR,
+                team_formation INTEGER,
+                kick_takers VARCHAR,
+                lineup VARCHAR,
+                logo_url VARCHAR,
+                team_name VARCHAR,
+                playoffs_qualified INTEGER,
+                playoff_won INTEGER,
+                quick_tactics VARCHAR,
+                special_packs_bought INTEGER,
+                team_abbreviation VARCHAR,
+                tournaments VARCHAR,
+                tppl INTEGER,
+                trophies VARCHAR
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateHutGeneralInfoTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_general_info (
+                user_id BIGINT PRIMARY KEY,
+                pucks INTEGER DEFAULT 1000,
+                stats SMALLINT[] DEFAULT '{}'
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateHutVersionInfoTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_version_info (
+                user_id BIGINT PRIMARY KEY,
+                escrow_version INTEGER,
+                general_version INTEGER,
+                unassigned_version INTEGER
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateHutSquadInfoTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_squad_info (
+                user_id BIGINT PRIMARY KEY,
+                chemistry INTEGER,
+                formation_id INTEGER,
+                lines INTEGER[] DEFAULT '{}',
+                manager BIGINT,
+                squad_name VARCHAR,
+                players BIGINT[] DEFAULT '{}',
+                star_rating INTEGER,
+                squad_id INTEGER
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateHutCardsTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_cards (
+                card_id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT,
+                attributes SMALLINT[] DEFAULT '{}',
+                state_id SMALLINT,
+                db_id INTEGER,
+                formation_id SMALLINT,
+                free SMALLINT,
+                career_remaining SMALLINT,
+                injury_games SMALLINT,
+                injury_type SMALLINT,
+                morale SMALLINT,
+                preferred_position_id SMALLINT,
+                discard_price SMALLINT,
+                rare_flag SMALLINT,
+                rating SMALLINT,
+                salary_cap INTEGER,
+                list_stats INTEGER[] DEFAULT '{}',
+                sub_type SMALLINT,
+                date_issued BIGINT,
+                team_id INTEGER,
+                list_training_cards INTEGER[] DEFAULT '{}',
+                uses_remaining SMALLINT,
+                deck_type INTEGER DEFAULT 1
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateTradeInfoTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_trade_info (
+                trade_id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT,
+                card_id BIGINT,
+                starting_price INTEGER,
+                highest_bid INTEGER DEFAULT 0,
+                buy_out_price INTEGER,
+                seller_name VARCHAR,
+                trade_state INTEGER,
+                duration_seconds INTEGER,
+                created_at_seconds BIGINT
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateOfferInfoTable()
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        const string createTableQuery = @"
+            CREATE TABLE IF NOT EXISTS hut_offer_info (
+                offer_id BIGSERIAL PRIMARY KEY,
+                trade_id BIGINT,
+                user_id BIGINT,
+                offer_state INTEGER,
+                credits INTEGER,
+                card_ids BIGINT[] DEFAULT '{}',
+                created_at_seconds BIGINT
+            );";
+        using var cmd = new NpgsqlCommand(createTableQuery, conn);
+        cmd.ExecuteNonQuery();
     }
 
     public ulong GetNextGameId()

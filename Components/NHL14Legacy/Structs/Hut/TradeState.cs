@@ -1,0 +1,10 @@
+namespace Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
+
+public enum TradeState : int
+{
+    CARDHOUSE_TRADESTATE_INVALID = 0,
+    CARDHOUSE_TRADESTATE_ACTIVE = 1,
+    CARDHOUSE_TRADESTATE_CANCELED = 2,
+    CARDHOUSE_TRADESTATE_EXPIRED = 3,
+    CARDHOUSE_TRADESTATE_CLOSED = 4,
+}

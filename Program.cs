@@ -129,7 +129,7 @@ internal class Program
         core.AddComponent<OSDKSettingsComponent>();
         core.AddComponent<TwoTwoSixEightComponent>();
         core.AddComponent<OsdkTicker2Component>();
-
+        core.AddComponent<CardHouseComponent>();
 
         tdfFactory.RegisterTdfType(typeof(Report));
         tdfFactory.RegisterTdfType(typeof(ClubReportVersusGame));
