@@ -80,20 +80,20 @@ public class HutManager
         await using var cmd = new NpgsqlCommand(sql, conn);
 
         cmd.Parameters.AddWithValue("user_id", userId);
-        cmd.Parameters.AddWithValue("custom_tactics", gamerInfo.mCustomTactics);
+        cmd.Parameters.AddWithValue("custom_tactics", gamerInfo.mCustomTactics ?? "");
         cmd.Parameters.AddWithValue("team_formation", (int)gamerInfo.mTeamFormation);
-        cmd.Parameters.AddWithValue("kick_takers", gamerInfo.mKickTakers);
-        cmd.Parameters.AddWithValue("lineup", gamerInfo.mLineup);
-        cmd.Parameters.AddWithValue("logo_url", gamerInfo.mLogoUrl);
+        cmd.Parameters.AddWithValue("kick_takers", gamerInfo.mKickTakers ?? "");
+        cmd.Parameters.AddWithValue("lineup", gamerInfo.mLineup ?? "");
+        cmd.Parameters.AddWithValue("logo_url", gamerInfo.mLogoUrl ?? "");
         cmd.Parameters.AddWithValue("team_name", gamerInfo.mTeamName ?? "");
         cmd.Parameters.AddWithValue("playoffs_qualified", (int)gamerInfo.mPlayoffsQualified);
         cmd.Parameters.AddWithValue("playoff_won", (int)gamerInfo.mPlayoffWon);
-        cmd.Parameters.AddWithValue("quick_tactics", gamerInfo.mQuickTactics);
+        cmd.Parameters.AddWithValue("quick_tactics", gamerInfo.mQuickTactics ?? "");
         cmd.Parameters.AddWithValue("special_packs_bought", (int)gamerInfo.mSpecialPacksBought);
-        cmd.Parameters.AddWithValue("team_abbreviation", gamerInfo.mTeamAbbreviation);
-        cmd.Parameters.AddWithValue("tournaments", gamerInfo.mTournaments);
+        cmd.Parameters.AddWithValue("team_abbreviation", gamerInfo.mTeamAbbreviation ?? "");
+        cmd.Parameters.AddWithValue("tournaments", gamerInfo.mTournaments ?? "");
         cmd.Parameters.AddWithValue("tppl", (int)gamerInfo.mTPPL);
-        cmd.Parameters.AddWithValue("trophies", gamerInfo.mTrophies);
+        cmd.Parameters.AddWithValue("trophies", gamerInfo.mTrophies ?? "");
 
         await cmd.ExecuteNonQueryAsync();
     }
