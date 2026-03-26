@@ -529,7 +529,11 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
 
     public override Task<ISWatchListResponse> ISWatchListAsync(ISWatchListRequest request, BlazeRpcContext context)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(new ISWatchListResponse
+        {
+            mTradeResults = new List<ISTradeInfo>(),
+            mTotalCount = 0
+        });
     }
 
     public override Task<ISWatchTradeResponse> ISWatchTradeAsync(ISWatchTradeRequest request, BlazeRpcContext context)
