@@ -4,6 +4,7 @@ using Zamboni14Legacy.Components.NHL14Legacy.Bases;
 using Zamboni14Legacy.Components.NHL14Legacy.Requests;
 using Zamboni14Legacy.Components.NHL14Legacy.Responses;
 using Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
+using Zamboni14Legacy.Server;
 
 namespace Zamboni14Legacy.Components.NHL14Legacy;
 
@@ -155,7 +156,7 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
                     mState = StorePackState.CARDHOUSE_STOREPACKSTATE_ACTIVE
                 }
             },
-            mServerTime = 0
+            mServerTime = Util.TimeNow()
         });
     }
 
