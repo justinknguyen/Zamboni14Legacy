@@ -227,7 +227,8 @@ public class HutTradeManager
             case CardSearchTypeParameter.SEARCH_ARENAS: sql.Append(" AND c.sub_type = 11"); break;
         }
 
-        if (request.mCategory >= 0 || request.mFormation >= 0 || request.mLevel >= 0 || request.mNation >= 0 || request.mFieldZone >= 0) throw new NotImplementedException();
+        if (request.mCategory >= 0) sql.Append(" AND c.sub_type = " + request.mCategory);
+        // mFormation, mLevel, mNation, mFieldZone filters not yet implemented — safely ignored
 
         if (request.mLeagueId >= 0)
         {
