@@ -48,6 +48,7 @@ public static class CardHouseComponentBase
         ISRemoveWatch = 806,
         storeGetPackTypes = 808,
         storePackQuantities = 810,
+        getSeasonConfiguration = 916,
         matchRegisterStart = 1000,
         matchRegisterFinish = 1001,
         getUserReliabilityInfo = 1002
@@ -99,6 +100,7 @@ public static class CardHouseComponentBase
             CardHouseComponentCommand.ISRemoveWatch => typeof(ISRemoveWatchRequest),
             CardHouseComponentCommand.storeGetPackTypes => typeof(StoreGetPackTypesRequest),
             CardHouseComponentCommand.storePackQuantities => typeof(StorePackQuantitiesRequest),
+            CardHouseComponentCommand.getSeasonConfiguration => typeof(SeasonDetailsRequest),
             CardHouseComponentCommand.matchRegisterStart => typeof(MatchRegisterStartRequest),
             CardHouseComponentCommand.matchRegisterFinish => typeof(MatchRegisterFinishRequest),
             CardHouseComponentCommand.getUserReliabilityInfo => typeof(ProvidedUID),
@@ -144,6 +146,7 @@ public static class CardHouseComponentBase
             CardHouseComponentCommand.ISAdminOffer => typeof(ISAdminOfferResponse),
             CardHouseComponentCommand.storeGetPackTypes => typeof(StoreGetPackTypesResponse),
             CardHouseComponentCommand.storePackQuantities => typeof(StorePackQuantitiesResponse),
+            CardHouseComponentCommand.getSeasonConfiguration => typeof(GetSeasonConfigurationResponse),
             CardHouseComponentCommand.matchRegisterStart => typeof(MatchRegisterStartResponse),
             CardHouseComponentCommand.matchRegisterFinish => typeof(NumericResponse),
             CardHouseComponentCommand.getUserReliabilityInfo => typeof(UserReliabilityInfoResponse),
@@ -302,6 +305,12 @@ public static class CardHouseComponentBase
 
         [BlazeCommand((ushort)CardHouseComponentCommand.storeGetPackTypes)]
         public virtual Task<StoreGetPackTypesResponse> StoreGetPackTypesAsync(StoreGetPackTypesRequest request, BlazeRpcContext context)
+        {
+            throw new BlazeRpcException(Blaze3RpcError.ERR_COMMAND_NOT_FOUND);
+        }
+
+        [BlazeCommand((ushort)CardHouseComponentCommand.getSeasonConfiguration)]
+        public virtual Task<GetSeasonConfigurationResponse> GetSeasonConfigurationAsync(SeasonDetailsRequest request, BlazeRpcContext context)
         {
             throw new BlazeRpcException(Blaze3RpcError.ERR_COMMAND_NOT_FOUND);
         }

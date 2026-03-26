@@ -160,6 +160,29 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
         });
     }
 
+    public override Task<GetSeasonConfigurationResponse> GetSeasonConfigurationAsync(SeasonDetailsRequest request, BlazeRpcContext context)
+    {
+        return Task.FromResult(new GetSeasonConfigurationResponse
+        {
+            mInstanceConfigList = new List<SeasonConfiguration>
+            {
+                new SeasonConfiguration
+                {
+                    mLeagueID = 1,
+                    mLeagueName = "HUT Seasons",
+                    mMemberType = MemberType.SEASONALPLAY_MEMBERTYPE_USER,
+                    mSeasonID = 1,
+                    mStatPeriodEnum = StatPeriod.STAT_PERIOD_ALLTIME,
+                    mTeamID = 0,
+                    mDivisionList = new List<Division>
+                    {
+                        new Division { mNumber = 1, mSize = 10, mTournamentRule = TournamentRule.SEASONALPLAY_TOURNAMENTRULE_UNLIMITED }
+                    }
+                }
+            }
+        });
+    }
+
     public override Task<StorePackQuantitiesResponse> StorePackQuantitiesAsync(StorePackQuantitiesRequest request, BlazeRpcContext context)
     {
         return Task.FromResult(new StorePackQuantitiesResponse
