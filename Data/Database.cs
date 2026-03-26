@@ -838,6 +838,10 @@ public class Database
             return;
         }
 
+        // Clean up any partial data from previous failed imports
+        using (var truncCmd = new NpgsqlCommand("TRUNCATE fcc_badges, fcc_kits, fcc_playercards", conn))
+            truncCmd.ExecuteNonQuery();
+
         ImportSqlCopyFile(conn, Path.Combine(staticDir, "fcc_badges.sql"), "fcc_badges", new[] { "carddbid", "teamid" });
         ImportSqlCopyFile(conn, Path.Combine(staticDir, "fcc_kits.sql"), "fcc_kits", new[] { "carddbid", "teamid" });
         ImportSqlCopyFile(conn, Path.Combine(staticDir, "fcc_playercards.sql"), "fcc_playercards",
@@ -859,8 +863,9 @@ public class Database
 
         var lines = File.ReadAllLines(filePath);
         bool inCopyBlock = false;
+        int rowCount = 0;
 
-        using var writer = conn.BeginBinaryImport($"COPY {tableName} ({string.Join(", ", columns)}) FROM STDIN (FORMAT BINARY)");
+        using var writer = conn.BeginTextImport($"COPY {tableName} ({string.Join(", ", columns)}) FROM STDIN");
 
         foreach (var line in lines)
         {
@@ -877,33 +882,12 @@ public class Database
                     break;
                 }
 
-                var values = line.Split('\t');
-                writer.StartRow();
-
-                for (int i = 0; i < columns.Length && i < values.Length; i++)
-                {
-                    var val = values[i];
-                    if (val == "\\N")
-                    {
-                        writer.WriteNull();
-                    }
-                    else if (int.TryParse(val, out int intVal))
-                    {
-                        writer.Write(intVal);
-                    }
-                    else if (long.TryParse(val, out long longVal))
-                    {
-                        writer.Write(longVal);
-                    }
-                    else
-                    {
-                        writer.Write(val);
-                    }
-                }
+                writer.WriteLine(line);
+                rowCount++;
             }
         }
 
-        writer.Complete();
+        Logger.Info($"Imported {rowCount} rows into {tableName}.");
     }
 
     public List<uint> GetListDbIds(CardSubType cardSubType)
