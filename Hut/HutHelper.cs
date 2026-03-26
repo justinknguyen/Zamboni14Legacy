@@ -1,3 +1,4 @@
+using System.Linq;
 using Npgsql;
 using Zamboni14Legacy.Components.NHL14Legacy.Structs.Hut;
 
@@ -9,7 +10,7 @@ public class HutHelper
     {
         var cardData = new CardData
         {
-            mAttributes = reader.GetFieldValue<byte[]>(reader.GetOrdinal("attributes")).ToList(),
+            mAttributes = reader.GetFieldValue<short[]>(reader.GetOrdinal("attributes")).Select(s => (byte)s).ToList(),
             mCardStateId = (CardState)(byte)reader.GetInt16(reader.GetOrdinal("state_id")),
             mCardId = reader.GetInt64(reader.GetOrdinal("card_id")),
             mCardDbId = (uint)reader.GetInt32(reader.GetOrdinal("db_id")),
@@ -23,7 +24,7 @@ public class HutHelper
             mDiscardPrice = (byte)reader.GetInt16(reader.GetOrdinal("discard_price")),
             mRareFlag = (byte)reader.GetInt16(reader.GetOrdinal("rare_flag")),
             mRating = (byte)reader.GetInt16(reader.GetOrdinal("rating")),
-            mSalaryCap = reader.GetInt16(reader.GetOrdinal("salary_cap")),
+            mSalaryCap = (short)reader.GetInt32(reader.GetOrdinal("salary_cap")),
             mListStats = reader.GetFieldValue<int[]>(reader.GetOrdinal("list_stats")).ToList(),
             mCardSubTypeId = (CardSubType)reader.GetInt16(reader.GetOrdinal("sub_type")),
             mDateIssued = (uint)reader.GetInt64(reader.GetOrdinal("date_issued")),

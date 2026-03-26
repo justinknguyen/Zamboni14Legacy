@@ -106,11 +106,10 @@ public class HutCardFactory
 
     public static async Task<CardData> CreateNonPlayerCard(long owner, uint dbId, CardSubType cardSubType)
     {
-        CardState cardState = CardState.CARDHOUSE_CARDSTATE_INVALID;
+        CardState cardState = CardState.CARDHOUSE_CARDSTATE_FREE;
         DeckType deckType = DeckType.CARDHOUSE_DECK_UNASSIGNED;
         if (cardSubType == CardSubType.CARDHOUSE_CARD_TYPE_STAFF_HEADCOACH)
         {
-            cardState = CardState.CARDHOUSE_CARDSTATE_FREE;
             deckType = DeckType.CARDHOUSE_DECK_STICKERBOOK;
         }
         var cardData = new CardData()
