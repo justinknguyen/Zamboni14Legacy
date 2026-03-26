@@ -64,7 +64,7 @@ public class HutCardFactory
 
     public static async Task<CardData> CreateRandomLogoCard(long owner)
     {
-        return await CreateNonPlayerCard(owner, (uint)new Random().Next(6000000, 6000029 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_BADGE);
+        return await CreateNonPlayerCard(owner, (uint)new Random().Next(6000000, 6000211 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_BADGE);
     }
 
     public static async Task<CardData> CreateRandomStadiumCard(long owner)
@@ -74,10 +74,10 @@ public class HutCardFactory
 
     public static async Task<CardData> CreateRandomJerseyCard(long owner, bool isHome, bool isRare)
     {
-        if (isRare) return await CreateNonPlayerCard(owner, (uint)new Random().Next(6300000, 6300029 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
-        if (isHome) return await CreateNonPlayerCard(owner, (uint)new Random().Next(6300000, 6300029 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
-        if (!isHome) return await CreateNonPlayerCard(owner, (uint)new Random().Next(6400000, 6400029 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
-        return await CreateNonPlayerCard(owner, (uint)new Random().Next(6300000, 6300029 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
+        if (isRare) return await CreateNonPlayerCard(owner, (uint)new Random().Next(6300000, 6300211 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
+        if (isHome) return await CreateNonPlayerCard(owner, (uint)new Random().Next(6300000, 6300211 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
+        if (!isHome) return await CreateNonPlayerCard(owner, (uint)new Random().Next(6400000, 6400211 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
+        return await CreateNonPlayerCard(owner, (uint)new Random().Next(6300000, 6300211 + 1), CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT);
     }
 
     public static async Task<int> TeamIdFromDbId(uint dbId)
