@@ -403,6 +403,71 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
             });
         }
 
+        if (request.mContextId == RequestContext.CARDHOUSE_STICKERBOOK_STATS_REQUEST_CONTEXT_NEW_CARDS_SCREEN)
+        {
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_PLAYERS,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED, playerTypes)
+            });
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_STAFF_HEADCOACH,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED, CardSubType.CARDHOUSE_CARD_TYPE_STAFF_HEADCOACH)
+            });
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_STADIA,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED, CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_STADIUM)
+            });
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_KITS,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED, CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_KIT)
+            });
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_BADGES,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED, CardSubType.CARDHOUSE_CARD_TYPE_CUSTOM_BADGE)
+            });
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_CONSUMABLES_CONTRACT,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED, CardSubType.CARDHOUSE_CARD_TYPE_CONTRACT_PLAYER)
+            });
+            stats.Add(new StickerBookStatResult
+            {
+                mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
+                mContextValue = 2,
+                mTypeId = ResultType.CARDHOUSE_STICKERBOOK_STAT_RESULT_TYPE_CONSUMABLES_TRAINING,
+                mValue = await HutManager.GetCardCountAsync(userId, DeckType.CARDHOUSE_DECK_UNASSIGNED,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ATTRIBUTE_SKATING,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ATTRIBUTE_SHOOTING,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ATTRIBUTE_HANDS,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ATTRIBUTE_CHECKING,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ATTRIBUTE_DEFENSE,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_PLAYER_ALL,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_GK_ATTRIBUTE_HIGH,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_GK_ATTRIBUTE_LOW,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_GK_ATTRIBUTE_QUICKNESS,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_GK_ATTRIBUTE_POSITIONING,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_GK_ATTRIBUTE_REBOUNDCONTROL,
+                    CardSubType.CARDHOUSE_CARD_TYPE_TRAINING_GK_ALL)
+            });
+        }
+
         if (request.mContextId == RequestContext.CARDHOUSE_STICKERBOOK_STATS_REQUEST_CONTEXT_YEAR)
         {
             foreach (var leagueId in HutCardFactory.LeagueTeamsMapping.Keys)
