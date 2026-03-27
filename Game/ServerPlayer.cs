@@ -22,7 +22,7 @@ public class ServerPlayer
     public SessionInfo SessionInfo { get; set; }
     public uint LastPingedTime { get; set; }
 
-    public ReplicatedGamePlayer ToReplicatedGamePlayer(byte slot, ulong gameId)
+    public ReplicatedGamePlayer ToReplicatedGamePlayer(byte slot, ulong gameId, ushort teamIndex = 0)
     {
         return new ReplicatedGamePlayer
         {
@@ -39,7 +39,7 @@ public class ServerPlayer
             mPlayerState = PlayerState.ACTIVE_CONNECTING,
             mSlotId = slot,
             mSlotType = SlotType.SLOT_PUBLIC,
-            mTeamIndex = slot,
+            mTeamIndex = teamIndex,
             mUserGroupId = default
         };
     }

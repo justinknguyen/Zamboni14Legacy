@@ -161,20 +161,32 @@ public class ServerGame
 
     public void AddGameParticipant(ServerPlayer serverPlayer, uint matchmakingSessionId = 0)
     {
-        ServerPlayers.Add(serverPlayer);
-        var slot = (byte)(ServerPlayers.Count - 1);
-        var replicatedGamePlayer = serverPlayer.ToReplicatedGamePlayer(slot, ReplicatedGameData.mGameId);
-
         var gameMode = ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
 
-        // For OTP (game mode 3), start on team 0 (home). The client will send setPlayerAttributes REQ=1
-        // which triggers ACTIVE_CONNECTED, after which team changes via SetPlayerTeam become available.
+        // For OTP, assign to team 0 (home) by default. Team changes happen later via SetPlayerTeam.
+        // For versus modes, use the slot index as team (0=home, 1=away).
+        ushort teamIndex;
         if (gameMode == "3")
-            replicatedGamePlayer.mTeamIndex = 0;
+        {
+            teamIndex = 0;
+        }
+        else
+        {
+            teamIndex = (ushort)(ServerPlayers.Count > 0 ? 1 : 0);
+        }
+
+        ServerPlayers.Add(serverPlayer);
+        var slot = (byte)(ServerPlayers.Count - 1);
+        var replicatedGamePlayer = serverPlayer.ToReplicatedGamePlayer(slot, ReplicatedGameData.mGameId, teamIndex);
 
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
-        ReplicatedGameData.mHostNetworkAddressList.Add(serverPlayer.ExtendedData.mAddress);
 
+        // Only add the joining player's network address for peer-to-peer mesh establishment.
+        // Index 0 is always the host (set during construction). Additional entries are peers.
+        if (ServerPlayers.Count > 1)
+            ReplicatedGameData.mHostNetworkAddressList.Add(serverPlayer.ExtendedData.mAddress);
+
+        // Send the full game setup to the joining player so they know about all existing peers
         GameManagerBase.Server.NotifyGameSetupAsync(serverPlayer.BlazeServerConnection, new NotifyGameSetup
         {
             mGameData = ReplicatedGameData,
@@ -192,6 +204,7 @@ public class ServerGame
             }
         });
 
+        // Notify all existing participants about the new player joining
         NotifyParticipants(new NotifyPlayerJoining
         {
             mGameId = ReplicatedGameData.mGameId,
@@ -217,6 +230,13 @@ public class ServerGame
             var replicatedPlayerToRemove = ReplicatedGamePlayers.Find(replicatedPlayer => replicatedPlayer.mPlayerName.Equals(serverPlayer.UserIdentification.mName));
 
             ReplicatedGamePlayers.Remove(replicatedPlayerToRemove);
+
+            // Remove the player's network address from the peer list.
+            // Index 0 is always the host; peer addresses start at index 1.
+            var playerAddr = serverPlayer.ExtendedData.mAddress;
+            var addrIndex = ReplicatedGameData.mHostNetworkAddressList.IndexOf(playerAddr);
+            if (addrIndex > 0)
+                ReplicatedGameData.mHostNetworkAddressList.RemoveAt(addrIndex);
 
             if (notifyOthers)
                 NotifyParticipants(new NotifyPlayerRemoved

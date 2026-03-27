@@ -129,6 +129,17 @@ internal class GameManager : GameManagerBase.Server
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(serverPlayer);
+
+            // Update lobby listings for all connected players so team counts reflect the new player
+            await Task.Delay(50);
+            var lobbies = GetLobbies();
+            foreach (var sp in ServerManager.GetServerPlayers().ToList())
+                NotifyGameListUpdateAsync(sp.BlazeServerConnection, new NotifyGameListUpdate
+                {
+                    mIsFinalUpdate = 1,
+                    mListId = 1,
+                    mUpdatedGames = lobbies
+                });
         });
 
         return Task.FromResult(new JoinGameResponse
