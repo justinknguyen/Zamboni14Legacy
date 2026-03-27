@@ -1,5 +1,6 @@
 using Blaze3SDK;
 using BlazeCommon;
+using NLog;
 using Zamboni14Legacy.Components.NHL14Legacy.Bases;
 using Zamboni14Legacy.Components.NHL14Legacy.Requests;
 using Zamboni14Legacy.Components.NHL14Legacy.Responses;
@@ -10,6 +11,7 @@ namespace Zamboni14Legacy.Components.NHL14Legacy;
 
 internal class CardHouseComponent : CardHouseComponentBase.Server
 {
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     public override async Task<LoginResponse> LoginRequestAsync(LoginRequest request, BlazeRpcContext context)
     {
         var userId = ServerManager.GetServerPlayer(context.BlazeConnection).UserIdentification.mAccountId;
@@ -355,6 +357,8 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
 
         List<StickerBookStatResult> stats = new();
 
+        Logger.Debug($"stickerBookStats2: mContextId={(int)request.mContextId} ({request.mContextId}), mYearId={request.mYearId}, mValue={request.mValue}");
+
         var playerTypes = new[]
         {
             CardSubType.CARDHOUSE_CARD_TYPE_PLAYER_C,
@@ -403,8 +407,9 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
             });
         }
 
-        if (request.mContextId == RequestContext.CARDHOUSE_STICKERBOOK_STATS_REQUEST_CONTEXT_NEW_CARDS_SCREEN)
+        if ((int)request.mContextId == 5)
         {
+            Logger.Debug("stickerBookStats2: entering NEW_CARDS_SCREEN block");
             stats.Add(new StickerBookStatResult
             {
                 mContextId = ResultContext.CARDHOUSE_STICKERBOOK_STAT_RESULT_CONTEXT_YEAR,
@@ -551,6 +556,7 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
             }
         }
 
+        Logger.Debug($"stickerBookStats2: returning {stats.Count} stats");
         return new StickerBookStats2Response { mStats = stats };
     }
 
@@ -743,10 +749,9 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
     public override async Task<CreatePackResponse> CreatePackAsync(CreatePackRequest request, BlazeRpcContext context)
     {
         long userId = ServerManager.GetServerPlayer(context.BlazeConnection).UserIdentification.mAccountId;
+        var versionInfo = await HutManager.GetVersionInfo(userId);
 
         List<CardData> cardDataList = await HutPackFactory.CreatePack(userId, request.mPackType);
-
-        var versionInfo = await HutManager.IncrementVersionInfo(userId, HutManager.VersionType.Unassigned);
 
         return new CreatePackResponse
         {
@@ -755,7 +760,7 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
             mNumCards = (uint)cardDataList.Count,
             mNumPackPurchased = 0,
             mRandPackType = 0,
-            mVersionInfo = versionInfo
+            mVersionInfo = versionInfo.Value
         };
     }
 }
