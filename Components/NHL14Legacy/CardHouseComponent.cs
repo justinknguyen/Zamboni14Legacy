@@ -749,9 +749,10 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
     public override async Task<CreatePackResponse> CreatePackAsync(CreatePackRequest request, BlazeRpcContext context)
     {
         long userId = ServerManager.GetServerPlayer(context.BlazeConnection).UserIdentification.mAccountId;
-        var versionInfo = await HutManager.GetVersionInfo(userId);
 
         List<CardData> cardDataList = await HutPackFactory.CreatePack(userId, request.mPackType);
+
+        var versionInfo = await HutManager.IncrementVersionInfo(userId, HutManager.VersionType.Unassigned);
 
         return new CreatePackResponse
         {
@@ -760,7 +761,7 @@ internal class CardHouseComponent : CardHouseComponentBase.Server
             mNumCards = (uint)cardDataList.Count,
             mNumPackPurchased = 0,
             mRandPackType = 0,
-            mVersionInfo = versionInfo.Value
+            mVersionInfo = versionInfo
         };
     }
 }
