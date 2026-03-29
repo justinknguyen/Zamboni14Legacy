@@ -7,6 +7,10 @@ namespace Zamboni14Legacy.Components.Blaze;
 
 internal class UtilComponent : UtilComponentBase.Server
 {
+    private static readonly Dictionary<string, string> LocalizedStrings = new()
+    {
+        { "PLAYER COUNT", "%d" }
+    };
     public override Task<PreAuthResponse> PreAuthAsync(PreAuthRequest request, BlazeRpcContext context)
     {
         return Task.FromResult(new PreAuthResponse
@@ -172,7 +176,7 @@ internal class UtilComponent : UtilComponentBase.Server
         var retList = new SortedDictionary<string, string>();
         foreach (var variable in request.mStringIds)
         {
-            retList.Add(variable, variable);
+            retList.Add(variable, LocalizedStrings.TryGetValue(variable, out var localized) ? localized : variable);
         }
 
         return Task.FromResult(new LocalizeStringsResponse

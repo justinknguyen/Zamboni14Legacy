@@ -105,13 +105,13 @@ internal class GameManager : GameManagerBase.Server
 
         if (serverGame == null || serverPlayer == null) throw new Exception();
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             await Task.Delay(50);
-            NotifyMatchmakingAsyncStatusAsync(context.BlazeConnection, new NotifyMatchmakingAsyncStatus
+            await NotifyMatchmakingAsyncStatusAsync(context.BlazeConnection, new NotifyMatchmakingAsyncStatus
             {
-                mMatchmakingAsyncStatusList = new List<MatchmakingAsyncStatus>
-                {
+                mMatchmakingAsyncStatusList =
+                [
                     new()
                     {
                         mHostBalanceRuleStatus = new HostBalanceRuleStatus
@@ -119,22 +119,40 @@ internal class GameManager : GameManagerBase.Server
                             mMatchedHostBalanceValue = HostBalanceRuleStatus.HostBalanceValues.HOSTS_UNBALANCED
                         }
                     }
-                },
+                ],
                 mMatchmakingSessionId = 0,
                 mUserSessionId = (uint)serverPlayer.UserIdentification.mAccountId
             });
         });
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(serverPlayer);
+
+            // For OTP, immediately transition joining player to ACTIVE_CONNECTED
+            var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) ? gm : "1";
+            if (gameMode == "3")
+            {
+                await Task.Delay(50);
+                serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
+                {
+                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+                    mPlayerId = serverPlayer.UserIdentification.mBlazeId,
+                    mPlayerState = PlayerState.ACTIVE_CONNECTED
+                });
+                serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
+                {
+                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+                    mPlayerId = serverPlayer.UserIdentification.mBlazeId
+                });
+            }
 
             // Update lobby listings for all connected players so team counts reflect the new player
             await Task.Delay(50);
             var lobbies = GetLobbies();
             foreach (var sp in ServerManager.GetServerPlayers().ToList())
-                NotifyGameListUpdateAsync(sp.BlazeServerConnection, new NotifyGameListUpdate
+                await NotifyGameListUpdateAsync(sp.BlazeServerConnection, new NotifyGameListUpdate
                 {
                     mIsFinalUpdate = 1,
                     mListId = 1,
@@ -173,7 +191,7 @@ internal class GameManager : GameManagerBase.Server
                 });
 
             var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
-            var teamCapacity = gameMode == "3" ? (ushort)6 : (ushort)1;
+            var teamCapacity = gameMode == "3" ? (ushort)2 : (ushort)1;
 
             // Build team info vector with actual player counts
             var teamInfo = new List<GameBrowserTeamInfo>();
@@ -216,11 +234,11 @@ internal class GameManager : GameManagerBase.Server
                     mNetworkTopology = serverGame.ReplicatedGameData.mNetworkTopology,
                     mPersistedGameId = serverGame.ReplicatedGameData.mPersistedGameId,
                     mPingSiteAlias = "qos",
-                    mPlayerCounts = new List<ushort>
-                    {
+                    mPlayerCounts =
+                    [
                         (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 0),
                         (ushort)serverGame.ReplicatedGamePlayers.Count(p => p.mTeamIndex == 1)
-                    },
+                    ],
                     mPresenceMode = serverGame.ReplicatedGameData.mPresenceMode,
                     mQueueCapacity = serverGame.ReplicatedGameData.mQueueCapacity,
                     mQueueCount = serverGame.ReplicatedGameData.mQueueCapacity,
@@ -238,10 +256,10 @@ internal class GameManager : GameManagerBase.Server
     {
         var lobbies = GetLobbies();
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             await Task.Delay(100);
-            NotifyGameListUpdateAsync(context.BlazeConnection, new NotifyGameListUpdate
+            await NotifyGameListUpdateAsync(context.BlazeConnection, new NotifyGameListUpdate
             {
                 mIsFinalUpdate = 1,
                 mListId = 1,
@@ -410,10 +428,10 @@ internal class GameManager : GameManagerBase.Server
         serverGame.RemoveGameParticipant(serverPlayer, request.mPlayerRemovedReason);
         
         //Hack fix
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             await Task.Delay(100);
-            UserSessionsBase.Server.NotifyUserSessionDisconnectedAsync(context.BlazeConnection, new UserSessionDisconnectReason
+            await UserSessionsBase.Server.NotifyUserSessionDisconnectedAsync(context.BlazeConnection, new UserSessionDisconnectReason
             {
                 mDisconnectReason = UserSessionDisconnectReason.DisconnectReason.DUPLICATE_LOGIN
             });
@@ -477,6 +495,26 @@ internal class GameManager : GameManagerBase.Server
         return Task.FromResult(new NullStruct());
     }
 
+    public override Task<NullStruct> SetGameAttributesAsync(SetGameAttributesRequest request, BlazeRpcContext context)
+    {
+        var serverGame = ServerManager.GetServerGame(request.mGameId);
+        if (serverGame == null) return Task.FromResult(new NullStruct());
+
+        var replicatedGameData = serverGame.ReplicatedGameData;
+        foreach (var kvp in request.mGameAttributes)
+            replicatedGameData.mGameAttribs[kvp.Key] = kvp.Value;
+        serverGame.ReplicatedGameData = replicatedGameData;
+
+        foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
+            NotifyGameAttribChangeAsync(serverPlayer.BlazeServerConnection, new NotifyGameAttribChange
+            {
+                mGameAttribs = request.mGameAttributes,
+                mGameId = request.mGameId
+            });
+
+        return Task.FromResult(new NullStruct());
+    }
+
     public override Task<NullStruct> UpdateGameHostMigrationStatusAsync(UpdateGameHostMigrationStatusRequest request, BlazeRpcContext context)
     {
         var serverGame = ServerManager.GetServerGame(request.mGameId);
@@ -509,6 +547,16 @@ internal class GameManager : GameManagerBase.Server
                     mGameId = request.mGameId,
                     mPlayerId = request.mPlayerId,
                     mTeamIndex = request.mTeamIndex
+                });
+
+            // Update lobby listings so game browser reflects correct per-team counts
+            var lobbies = GetLobbies();
+            foreach (var sp in ServerManager.GetServerPlayers().ToList())
+                NotifyGameListUpdateAsync(sp.BlazeServerConnection, new NotifyGameListUpdate
+                {
+                    mIsFinalUpdate = 1,
+                    mListId = 1,
+                    mUpdatedGames = lobbies
                 });
         }
 
@@ -546,14 +594,14 @@ internal class GameManager : GameManagerBase.Server
         var host = ServerManager.GetServerPlayer(context.BlazeConnection);
         var serverGame = new ServerGame(host, request);
         
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(host);
             var lobbies = GetLobbies();
 
             foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
-                NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
+                await NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
                 {
                     mIsFinalUpdate = 1,
                     mListId = 1,
@@ -572,18 +620,36 @@ internal class GameManager : GameManagerBase.Server
     {
         var host = ServerManager.GetServerPlayer(context.BlazeConnection);
         var serverGame = new ServerGame(host, request);
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(host);
+
+            // For OTP, immediately transition host to ACTIVE_CONNECTED
+            // so the side-select screen becomes interactive (no mesh peer to trigger this)
+            if (request.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) && gm == "3")
+            {
+                await Task.Delay(50);
+                serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
+                {
+                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+                    mPlayerId = host.UserIdentification.mBlazeId,
+                    mPlayerState = PlayerState.ACTIVE_CONNECTED
+                });
+                serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
+                {
+                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+                    mPlayerId = host.UserIdentification.mBlazeId
+                });
+            }
+
             var lobbies = GetLobbies();
 
             foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
-                NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
+                await NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
                 {
                     mIsFinalUpdate = 1,
                     mListId = 1,
-                    // mRemovedGameList = null, Not sure should we use this
                     mUpdatedGames = lobbies
                 });
         });
