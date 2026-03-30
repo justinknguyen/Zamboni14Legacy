@@ -191,7 +191,6 @@ internal class GameManager : GameManagerBase.Server
                 });
 
             var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var mode) ? mode : "1";
-            var teamCapacity = gameMode == "3" ? (ushort)2 : (ushort)1;
 
             // Build team info vector with actual player counts
             var teamInfo = new List<GameBrowserTeamInfo>();
@@ -243,7 +242,7 @@ internal class GameManager : GameManagerBase.Server
                     mQueueCapacity = serverGame.ReplicatedGameData.mQueueCapacity,
                     mQueueCount = serverGame.ReplicatedGameData.mQueueCapacity,
                     mSlotCapacities = serverGame.ReplicatedGameData.mSlotCapacities,
-                    mTeamCapacity = teamCapacity,
+                    mTeamCapacity = serverGame.ReplicatedGameData.mTeamCapacity,
                     mVoipTopology = VoipTopology.VOIP_DISABLED
                 }
             });
@@ -598,6 +597,25 @@ internal class GameManager : GameManagerBase.Server
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(host);
+
+            // For OTP, immediately transition host to ACTIVE_CONNECTED
+            // so the side-select screen becomes interactive
+            if (request.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) && gm == "3")
+            {
+                await Task.Delay(50);
+                serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
+                {
+                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+                    mPlayerId = host.UserIdentification.mBlazeId,
+                    mPlayerState = PlayerState.ACTIVE_CONNECTED
+                });
+                serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
+                {
+                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
+                    mPlayerId = host.UserIdentification.mBlazeId
+                });
+            }
+
             var lobbies = GetLobbies();
 
             foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())

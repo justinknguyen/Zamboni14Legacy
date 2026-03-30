@@ -103,7 +103,7 @@ public class ServerGame
             mMaxPlayerCapacity = request.mMaxPlayerCapacity,
             mMeshAttribs = request.mMeshAttribs,
             mNetworkQosData = host.ExtendedData.mQosData,
-            mNetworkTopology = GameNetworkTopology.PEER_TO_PEER_FULL_MESH,
+            mNetworkTopology = request.mNetworkTopology,
             mPersistedGameId = gameId.ToString(),
             mPersistedGameIdSecret = request.mPersistedGameIdSecret,
             mPingSiteAlias = "qos",
@@ -117,11 +117,9 @@ public class ServerGame
             mQueueCapacity = request.mQueueCapacity,
             mServerNotResetable = request.mServerNotResetable,
             mSharedSeed = (uint)gameId,
-            mSlotCapacities = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode) && otpMode == "3"
-                ? new List<ushort> { 6, 6 }
-                : request.mSlotCapacities,
-            mTeamCapacity = otpMode == "3" ? (ushort)6 : request.mTeamCapacity,
-            mTeamIds = otpMode == "3"
+            mSlotCapacities = request.mSlotCapacities,
+            mTeamCapacity = request.mTeamCapacity,
+            mTeamIds = request.mGameAttribs.TryGetValue("OSDK_gameMode", out var otpMode) && otpMode == "3"
                 ? new List<ushort> { 0, 1 }
                 : request.mTeamIds,
             mTopologyHostInfo = new HostInfo
