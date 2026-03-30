@@ -310,6 +310,27 @@ internal class GameManager : GameManagerBase.Server
                 mNewGameState = GameState.PRE_GAME
             });
 
+        // For OTP, transition all players to ACTIVE_CONNECTED after PRE_GAME
+        // so the side-select screen becomes interactive
+        var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) ? gm : "1";
+        if (gameMode == "3")
+        {
+            foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
+            {
+                serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
+                {
+                    mGameId = request.mGameId,
+                    mPlayerId = serverPlayer.UserIdentification.mBlazeId,
+                    mPlayerState = PlayerState.ACTIVE_CONNECTED
+                });
+                serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
+                {
+                    mGameId = request.mGameId,
+                    mPlayerId = serverPlayer.UserIdentification.mBlazeId
+                });
+            }
+        }
+
         return Task.FromResult(new NullStruct());
     }
 
@@ -597,25 +618,6 @@ internal class GameManager : GameManagerBase.Server
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(host);
-
-            // For OTP, immediately transition host to ACTIVE_CONNECTED
-            // so the side-select screen becomes interactive
-            if (request.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) && gm == "3")
-            {
-                await Task.Delay(50);
-                serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
-                {
-                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
-                    mPlayerId = host.UserIdentification.mBlazeId,
-                    mPlayerState = PlayerState.ACTIVE_CONNECTED
-                });
-                serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
-                {
-                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
-                    mPlayerId = host.UserIdentification.mBlazeId
-                });
-            }
-
             var lobbies = GetLobbies();
 
             foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
@@ -642,25 +644,6 @@ internal class GameManager : GameManagerBase.Server
         {
             await Task.Delay(100);
             serverGame.AddGameParticipant(host);
-
-            // For OTP, immediately transition host to ACTIVE_CONNECTED
-            // so the side-select screen becomes interactive (no mesh peer to trigger this)
-            if (request.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) && gm == "3")
-            {
-                await Task.Delay(50);
-                serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
-                {
-                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
-                    mPlayerId = host.UserIdentification.mBlazeId,
-                    mPlayerState = PlayerState.ACTIVE_CONNECTED
-                });
-                serverGame.NotifyParticipants(new NotifyPlayerJoinCompleted
-                {
-                    mGameId = (uint)serverGame.ReplicatedGameData.mGameId,
-                    mPlayerId = host.UserIdentification.mBlazeId
-                });
-            }
-
             var lobbies = GetLobbies();
 
             foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
