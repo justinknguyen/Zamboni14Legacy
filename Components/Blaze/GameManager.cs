@@ -51,35 +51,68 @@ internal class GameManager : GameManagerBase.Server
         }
     }
 
-    // private static void SendToMatchMakingGame(QueuedPlayer host, QueuedPlayer notHost, StartMatchmakingRequest startMatchmakingRequest, string gameMode)
-    // {
-    //     var zamboniGame = new ServerGame(host.ServerPlayer, startMatchmakingRequest, gameMode);
-    //     
-    //     zamboniGame.AddGameParticipant(host.ServerPlayer, host.MatchmakingSessionId);
-    //
-    //     Task.Run(async () =>
-    //     {
-    //         await Task.Delay(200); 
-    //         
-    //       
-    //         
-    //     zamboniGame.AddGameParticipant(notHost.ServerPlayer, notHost.MatchmakingSessionId);
-    //         
-    //     });
-    // }
-    //
-    // public override Task<StartMatchmakingResponse> StartMatchmakingAsync(StartMatchmakingRequest request, BlazeRpcContext context)
-    // {
-    //     var serverPlayer = ServerManager.GetServerPlayer(context.BlazeConnection);
-    //
-    //     var queuedPlayer = new QueuedPlayer(serverPlayer, request);
-    //     ServerManager.AddQueuedPlayer(queuedPlayer);
-    //
-    //     return Task.FromResult(new StartMatchmakingResponse
-    //     {
-    //         mSessionId = queuedPlayer.MatchmakingSessionId
-    //     });
-    // }
+    public override Task<StartMatchmakingResponse> StartMatchmakingAsync(StartMatchmakingRequest request, BlazeRpcContext context)
+    {
+        var host = ServerManager.GetServerPlayer(context.BlazeConnection);
+        var matchmakingSessionId = (uint)host.UserIdentification.mAccountId;
+
+        // Build game attributes from matchmaking criteria rules
+        var gameAttribs = new SortedDictionary<string, string>();
+        foreach (var rule in request.mCriteriaData.mGenericRulePrefsList)
+        {
+            if (rule.mDesiredValues is { Count: > 0 } && rule.mDesiredValues[0] != "abstain")
+                gameAttribs[rule.mRuleName] = rule.mDesiredValues[0];
+        }
+        // Fill in defaults for "abstain" rules
+        gameAttribs.TryAdd("ClubRules", "0");
+        gameAttribs.TryAdd("Fighting", "1");
+        gameAttribs.TryAdd("Injuries", "1");
+        gameAttribs.TryAdd("Penalties", "1");
+        gameAttribs.TryAdd("PeriodLength", "5");
+        gameAttribs.TryAdd("Rules", "1");
+        gameAttribs.TryAdd("OSDK_rosterURL", "");
+
+        // Create game from matchmaking request
+        var createRequest = new CreateGameRequest
+        {
+            mGameAttribs = gameAttribs,
+            mGameProtocolVersionString = request.mGameProtocolVersionString,
+            mGameSettings = request.mGameSettings,
+            mIgnoreEntryCriteriaWithInvite = request.mIgnoreEntryCriteriaWithInvite,
+            mMaxPlayerCapacity = request.mMaxPlayerCapacity,
+            mNetworkTopology = request.mNetworkTopology,
+            mQueueCapacity = request.mQueueCapacity,
+            mSlotCapacities = new List<ushort> { 12, 0 },
+            mTeamCapacity = 0,
+            mVoipNetwork = request.mVoipNetwork,
+            mEntryCriteriaMap = request.mEntryCriteriaMap ?? new SortedDictionary<string, string>(),
+            mPersistedGameIdSecret = Array.Empty<byte>(),
+            mPresenceMode = PresenceMode.PRESENCE_MODE_STANDARD,
+            mHostNetworkAddressList = new List<NetworkAddress> { host.ExtendedData.mAddress }
+        };
+
+        var serverGame = new ServerGame(host, createRequest);
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(100);
+            serverGame.AddGameParticipant(host, matchmakingSessionId);
+            var lobbies = GetLobbies();
+
+            foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
+                await NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
+                {
+                    mIsFinalUpdate = 1,
+                    mListId = 1,
+                    mUpdatedGames = lobbies
+                });
+        });
+
+        return Task.FromResult(new StartMatchmakingResponse
+        {
+            mSessionId = matchmakingSessionId
+        });
+    }
 
     public override Task<NullStruct> CancelMatchmakingAsync(CancelMatchmakingRequest request, BlazeRpcContext context)
     {
