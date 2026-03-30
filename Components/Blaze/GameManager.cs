@@ -79,7 +79,7 @@ internal class GameManager : GameManagerBase.Server
             mGameProtocolVersionString = request.mGameProtocolVersionString,
             mGameSettings = request.mGameSettings,
             mIgnoreEntryCriteriaWithInvite = request.mIgnoreEntryCriteriaWithInvite,
-            mMaxPlayerCapacity = request.mMaxPlayerCapacity,
+            mMaxPlayerCapacity = 12,
             mNetworkTopology = request.mNetworkTopology,
             mQueueCapacity = request.mQueueCapacity,
             mSlotCapacities = new List<ushort> { 12, 0 },
@@ -95,10 +95,27 @@ internal class GameManager : GameManagerBase.Server
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(100);
-            serverGame.AddGameParticipant(host, matchmakingSessionId);
-            var lobbies = GetLobbies();
+            await Task.Delay(50);
+            await NotifyMatchmakingAsyncStatusAsync(context.BlazeConnection, new NotifyMatchmakingAsyncStatus
+            {
+                mMatchmakingAsyncStatusList =
+                [
+                    new()
+                    {
+                        mHostBalanceRuleStatus = new HostBalanceRuleStatus
+                        {
+                            mMatchedHostBalanceValue = HostBalanceRuleStatus.HostBalanceValues.HOSTS_UNBALANCED
+                        }
+                    }
+                ],
+                mMatchmakingSessionId = matchmakingSessionId,
+                mUserSessionId = matchmakingSessionId
+            });
 
+            await Task.Delay(50);
+            serverGame.AddGameParticipant(host, matchmakingSessionId);
+
+            var lobbies = GetLobbies();
             foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
                 await NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
                 {
@@ -343,11 +360,18 @@ internal class GameManager : GameManagerBase.Server
                 mNewGameState = GameState.PRE_GAME
             });
 
-        // For OTP, transition all players to ACTIVE_CONNECTED after PRE_GAME
-        // so the side-select screen becomes interactive
+        // For OTP, notify platform host and transition all players to ACTIVE_CONNECTED
         var gameMode = serverGame.ReplicatedGameData.mGameAttribs.TryGetValue("OSDK_gameMode", out var gm) ? gm : "1";
         if (gameMode == "3")
         {
+            // Tell the host client that it has been initialized as the platform host
+            foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
+                NotifyPlatformHostInitializedAsync(serverPlayer.BlazeServerConnection, new NotifyPlatformHostInitialized
+                {
+                    mGameId = request.mGameId,
+                    mPlatformHostSlotId = 0
+                });
+
             foreach (var serverPlayer in serverGame.ServerPlayers.ToList())
             {
                 serverGame.NotifyParticipants(new NotifyGamePlayerStateChange
