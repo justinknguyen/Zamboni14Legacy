@@ -53,81 +53,28 @@ internal class GameManager : GameManagerBase.Server
 
     public override Task<StartMatchmakingResponse> StartMatchmakingAsync(StartMatchmakingRequest request, BlazeRpcContext context)
     {
-        var host = ServerManager.GetServerPlayer(context.BlazeConnection);
-        var matchmakingSessionId = (uint)host.UserIdentification.mAccountId;
+        var serverPlayer = ServerManager.GetServerPlayer(context.BlazeConnection);
+        var queuedPlayer = new QueuedPlayer(serverPlayer, request);
+        ServerManager.AddQueuedPlayer(queuedPlayer);
 
-        // Build game attributes from matchmaking criteria rules
-        var gameAttribs = new SortedDictionary<string, string>();
-        foreach (var rule in request.mCriteriaData.mGenericRulePrefsList)
-        {
-            if (rule.mDesiredValues is { Count: > 0 } && rule.mDesiredValues[0] != "abstain")
-                gameAttribs[rule.mRuleName] = rule.mDesiredValues[0];
-        }
-        // Fill in defaults for "abstain" rules
-        gameAttribs.TryAdd("ClubRules", "0");
-        gameAttribs.TryAdd("Fighting", "1");
-        gameAttribs.TryAdd("Injuries", "1");
-        gameAttribs.TryAdd("Penalties", "1");
-        gameAttribs.TryAdd("PeriodLength", "5");
-        gameAttribs.TryAdd("Rules", "1");
-        gameAttribs.TryAdd("OSDK_rosterURL", "");
-
-        // Create game from matchmaking request
-        var createRequest = new CreateGameRequest
-        {
-            mGameAttribs = gameAttribs,
-            mGameProtocolVersionString = request.mGameProtocolVersionString,
-            mGameSettings = request.mGameSettings,
-            mIgnoreEntryCriteriaWithInvite = request.mIgnoreEntryCriteriaWithInvite,
-            mMaxPlayerCapacity = 12,
-            mNetworkTopology = request.mNetworkTopology,
-            mQueueCapacity = request.mQueueCapacity,
-            mSlotCapacities = new List<ushort> { 6, 6 },
-            mTeamCapacity = 2,
-            mVoipNetwork = request.mVoipNetwork,
-            mEntryCriteriaMap = request.mEntryCriteriaMap ?? new SortedDictionary<string, string>(),
-            mPersistedGameIdSecret = Array.Empty<byte>(),
-            mPresenceMode = PresenceMode.PRESENCE_MODE_STANDARD,
-            mHostNetworkAddressList = new List<NetworkAddress> { host.ExtendedData.mAddress }
-        };
-
-        var serverGame = new ServerGame(host, createRequest);
-
+        // Immediately time out matchmaking so the client falls through to the
+        // browse-lobbies / create-your-own screen, matching Online Versus behaviour.
         _ = Task.Run(async () =>
         {
-            await Task.Delay(50);
-            await NotifyMatchmakingAsyncStatusAsync(context.BlazeConnection, new NotifyMatchmakingAsyncStatus
+            await Task.Delay(100);
+            ServerManager.RemoveQueuedPlayer(queuedPlayer);
+            await NotifyMatchmakingFailedAsync(context.BlazeConnection, new NotifyMatchmakingFailed
             {
-                mMatchmakingAsyncStatusList =
-                [
-                    new()
-                    {
-                        mHostBalanceRuleStatus = new HostBalanceRuleStatus
-                        {
-                            mMatchedHostBalanceValue = HostBalanceRuleStatus.HostBalanceValues.HOSTS_UNBALANCED
-                        }
-                    }
-                ],
-                mMatchmakingSessionId = matchmakingSessionId,
-                mUserSessionId = matchmakingSessionId
+                mMatchmakingResult = MatchmakingResult.SESSION_TIMED_OUT,
+                mMaxPossibleFitScore = 0,
+                mSessionId = queuedPlayer.MatchmakingSessionId,
+                mUserSessionId = (uint)serverPlayer.UserIdentification.mAccountId
             });
-
-            await Task.Delay(50);
-            serverGame.AddGameParticipant(host, matchmakingSessionId);
-
-            var lobbies = GetLobbies();
-            foreach (var serverPlayer in ServerManager.GetServerPlayers().ToList())
-                await NotifyGameListUpdateAsync(serverPlayer.BlazeServerConnection, new NotifyGameListUpdate
-                {
-                    mIsFinalUpdate = 1,
-                    mListId = 1,
-                    mUpdatedGames = lobbies
-                });
         });
 
         return Task.FromResult(new StartMatchmakingResponse
         {
-            mSessionId = matchmakingSessionId
+            mSessionId = queuedPlayer.MatchmakingSessionId
         });
     }
 
@@ -483,8 +430,13 @@ internal class GameManager : GameManagerBase.Server
                 }
                 case PlayerNetConnectionStatus.DISCONNECTED:
                 {
-                    var serverPlayer = ServerManager.GetServerPlayer((uint)playerConnectionStatus.mTargetPlayer);
-                    serverGame.RemoveGameParticipant(serverPlayer, PlayerRemovedReason.PLAYER_CONN_LOST);
+                    // Do NOT remove the player here. During P2P full-mesh setup (especially on game
+                    // load with 3+ players), clients send DISCONNECTED for every peer as they reset
+                    // their mesh state before re-establishing connections. Removing players on these
+                    // transient reports causes a cascade that kicks everyone.
+                    // Actual removal is handled by OnProtoFireDisconnectAsync when the client truly
+                    // drops its Blaze connection.
+                    Logger.Debug($"UpdateMeshConnection DISCONNECTED: game={request.mGameId} target={playerConnectionStatus.mTargetPlayer} (ignored, waiting for Blaze disconnect)");
                     break;
                 }
                 default:

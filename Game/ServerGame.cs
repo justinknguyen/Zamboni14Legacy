@@ -179,10 +179,10 @@ public class ServerGame
 
         ReplicatedGamePlayers.Add(replicatedGamePlayer);
 
-        // Only add the joining player's network address for peer-to-peer mesh establishment.
-        // Index 0 is always the host (set during construction). Additional entries are peers.
-        if (ServerPlayers.Count > 1)
-            ReplicatedGameData.mHostNetworkAddressList.Add(serverPlayer.ExtendedData.mAddress);
+        // mHostNetworkAddressList contains ONLY the topology host's network addresses.
+        // Each player's individual address is in their ReplicatedGamePlayer.mNetworkAddress,
+        // which is included in NotifyGameSetup (full roster) and NotifyPlayerJoining (new peer).
+        // Adding non-host addresses here confuses the PS3 P2P mesh establishment.
 
         // Send the full game setup to the joining player so they know about all existing peers
         GameManagerBase.Server.NotifyGameSetupAsync(serverPlayer.BlazeServerConnection, new NotifyGameSetup
@@ -228,13 +228,6 @@ public class ServerGame
             var replicatedPlayerToRemove = ReplicatedGamePlayers.Find(replicatedPlayer => replicatedPlayer.mPlayerName.Equals(serverPlayer.UserIdentification.mName));
 
             ReplicatedGamePlayers.Remove(replicatedPlayerToRemove);
-
-            // Remove the player's network address from the peer list.
-            // Index 0 is always the host; peer addresses start at index 1.
-            var playerAddr = serverPlayer.ExtendedData.mAddress;
-            var addrIndex = ReplicatedGameData.mHostNetworkAddressList.IndexOf(playerAddr);
-            if (addrIndex > 0)
-                ReplicatedGameData.mHostNetworkAddressList.RemoveAt(addrIndex);
 
             if (notifyOthers)
                 NotifyParticipants(new NotifyPlayerRemoved
