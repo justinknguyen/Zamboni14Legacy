@@ -152,22 +152,14 @@ internal class UtilComponent : UtilComponentBase.Server
 
     public override Task<FetchConfigResponse> FetchClientConfigAsync(FetchClientConfigRequest request, BlazeRpcContext context)
     {
-        if (request.mConfigSection.Equals("OSDK_ROSTER"))
-            return Task.FromResult(new FetchConfigResponse
-            {
-                mConfig = new SortedDictionary<string, string>
-                {
-                    {
-                        "CRC", ""
-                    },
-                    {
-                        "URL", ""
-                    }
-                }
-            });
         return Task.FromResult(new FetchConfigResponse
         {
             mConfig = new SortedDictionary<string, string>()
+            {
+                {
+                    "OSDK_MAX_PER_OTP_SIDE", "6"
+                }
+            }
         });
     }
 
